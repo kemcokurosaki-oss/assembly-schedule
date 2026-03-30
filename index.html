@@ -2763,6 +2763,16 @@ gantt.locale.labels.section_project_number   = "工事番号";
 
             const today = new Date().toISOString().split('T')[0];
 
+            // ===== デバッグ =====
+            const s2000 = data.filter(t => String(t.project_number).startsWith('2'));
+            if (s2000.length > 0) {
+                console.log("2000番台サンプル(最初の3件):");
+                s2000.slice(0, 3).forEach(t => console.log({ project_number: t.project_number, is_detailed: t.is_detailed, major_item: t.major_item, start_date: t.start_date, end_date: t.end_date, duration: t.duration }));
+            } else {
+                console.log("DBに2000番台(project_numberが2で始まる)のタスクなし");
+            }
+            // ===================
+
             const parsedTasks = data.map(t => {
                 const startDate = t.start_date
                     ? _parseSupabaseDate(t.start_date)
