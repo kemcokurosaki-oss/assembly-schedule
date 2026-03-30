@@ -1567,6 +1567,7 @@
         function _isTaskDisplayed(task) {
             const isDetailed = (task.is_detailed === true || String(task.is_detailed).toUpperCase() === 'TRUE');
             if (!isDetailed) return false;
+            if (String(task.major_item) !== '組立') return false;
             if (currentProjectFilter.length > 0 && !currentProjectFilter.includes(String(task.project_number))) return false;
             if (currentTaskTypeFilter && String(task.task_type) !== currentTaskTypeFilter) return false;
             if (currentOwnerFilter.length > 0) {
