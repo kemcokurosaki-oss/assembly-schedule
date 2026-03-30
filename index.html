@@ -2671,11 +2671,11 @@ gantt.locale.labels.section_project_number   = "工事番号";
             return "";
         };
 
-        // フィルタリング（is_detailedかつmajor_item=組立のみ表示、かつ工事番号フィルタ）
+        // フィルタリング（is_detailed=FALSE かつ major_item=組立のみ表示、かつ工事番号フィルタ）
         gantt.attachEvent("onBeforeTaskDisplay", function(id, task) {
-            // is_detailed が TRUE または "TRUE" のもののみ表示
+            // is_detailed が TRUE のタスクは設計工程表用なので除外
             const isDetailed = (task.is_detailed === true || String(task.is_detailed).toUpperCase() === 'TRUE');
-            if (!isDetailed) return false;
+            if (isDetailed) return false;
 
             // major_item が「組立」のもののみ表示
             if (String(task.major_item) !== '組立') return false;
