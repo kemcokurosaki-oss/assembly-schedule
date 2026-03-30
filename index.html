@@ -2763,15 +2763,6 @@ gantt.locale.labels.section_project_number   = "工事番号";
 
             const today = new Date().toISOString().split('T')[0];
 
-            // ===== デバッグ =====
-            const s2000 = data.filter(t => String(t.project_number).startsWith('2'));
-            const s2000_kumitate = s2000.filter(t => String(t.major_item) === '組立' && !(t.is_detailed === true || String(t.is_detailed).toUpperCase() === 'TRUE'));
-            const majorItemCount = {};
-            s2000.forEach(t => { const k = String(t.major_item); majorItemCount[k] = (majorItemCount[k] || 0) + 1; });
-            console.log("2000番台 件数:", s2000.length, "/ major_item内訳:", JSON.stringify(majorItemCount));
-            console.log("2000番台 表示対象(組立)件数:", s2000_kumitate.length);
-            // ===================
-
             const parsedTasks = data.map(t => {
                 const startDate = t.start_date
                     ? _parseSupabaseDate(t.start_date)
