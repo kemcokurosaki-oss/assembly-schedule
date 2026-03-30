@@ -2774,6 +2774,17 @@ gantt.locale.labels.section_project_number   = "工事番号";
             _gridSelection.clear();
             _lastGridClickId = null;
 
+            // ===== デバッグ用ログ（問題解決後に削除） =====
+            console.log("総タスク数:", parsedTasks.length);
+            const sample = parsedTasks.slice(0, 3);
+            sample.forEach(t => console.log("サンプルタスク:", { id: t.id, is_detailed: t.is_detailed, major_item: t.major_item, task_type: t.task_type }));
+            const assemblyTasks = parsedTasks.filter(t => {
+                const isDetailed = (t.is_detailed === true || String(t.is_detailed).toUpperCase() === 'TRUE');
+                return !isDetailed && String(t.major_item) === '組立';
+            });
+            console.log("組立タスク数（表示対象）:", assemblyTasks.length);
+            // ================================================
+
             gantt.clearAll();
             gantt.parse({
                 data: parsedTasks
