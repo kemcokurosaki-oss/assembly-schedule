@@ -1102,11 +1102,10 @@
             const todayLineHtml = `<div class="resource-today-line" style="left: ${todayPos}px;"></div>`;
 
             let html = `<div style="width: ${totalWidth}px;">`; // 全体の幅を指定するコンテナを追加
-            // 担当者1人につき4行（計画・図面・長納期品・出張）で表示
+            // 担当者1人につき3行（組立・組立場所・出張）で表示
             const TASK_TYPE_ROWS = [
-                { type: 'planning',       label: '計画' },
-                { type: 'drawing',        label: '図面' },
-                { type: 'long_lead_item', label: '長納期品' },
+                { type: 'drawing',        label: '組立' },
+                { type: 'long_lead_item', label: '組立場所' },
                 { type: 'business_trip',  label: '出張' },
             ];
 
