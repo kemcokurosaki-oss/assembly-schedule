@@ -2686,9 +2686,15 @@ gantt.locale.labels.section_project_number   = "工事番号";
                 if (!currentProjectFilter.includes(String(task.project_number))) return false;
             }
 
-            // task_typeフィルタ
+            // task_typeフィルタ（'drawing'の場合はtask_type=nullも含む）
             if (currentTaskTypeFilter) {
-                if (String(task.task_type) !== currentTaskTypeFilter) return false;
+                const tt = task.task_type;
+                const isNull = (tt === null || tt === undefined || tt === '' || String(tt) === 'null');
+                if (currentTaskTypeFilter === 'drawing') {
+                    if (!isNull && String(tt) !== 'drawing') return false;
+                } else {
+                    if (String(tt) !== currentTaskTypeFilter) return false;
+                }
             }
 
             // 担当者フィルタ（複数選択対応）
