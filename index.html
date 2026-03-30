@@ -1572,7 +1572,15 @@
             if (isDetailed) return false;
             if (String(task.major_item) !== '組立') return false;
             if (currentProjectFilter.length > 0 && !currentProjectFilter.includes(String(task.project_number))) return false;
-            if (currentTaskTypeFilter && String(task.task_type) !== currentTaskTypeFilter) return false;
+            if (currentTaskTypeFilter) {
+                const tt = task.task_type;
+                const isNull = (tt === null || tt === undefined || tt === '' || String(tt) === 'null');
+                if (currentTaskTypeFilter === 'drawing') {
+                    if (!isNull && String(tt) !== 'drawing') return false;
+                } else {
+                    if (String(tt) !== currentTaskTypeFilter) return false;
+                }
+            }
             if (currentOwnerFilter.length > 0) {
                 const taskOwners = String(task.owner || '').split(/[,、\s]+/).map(o => o.trim());
                 if (!currentOwnerFilter.some(f => taskOwners.includes(f))) return false;
