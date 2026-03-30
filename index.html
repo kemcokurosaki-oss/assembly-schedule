@@ -3539,8 +3539,11 @@ gantt.locale.labels.section_project_number   = "工事番号";
                         gantt.ext.zoom.setLevel(currentLevel);
                     }, 0);
                 } else {
-                    // 直接アクセス：担当別モードで起動
-                    _enterResourceFullscreen();
+                    // 直接アクセス：全組立タスクをガントで表示（task_typeフィルターなし）
+                    currentTaskTypeFilter = null;
+                    updateFilterButtons();
+                    gantt.render();
+                    gantt.showDate(new Date());
                 }
             });
         }
