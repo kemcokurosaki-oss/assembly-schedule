@@ -2765,12 +2765,10 @@ gantt.locale.labels.section_project_number   = "工事番号";
 
             // ===== デバッグ =====
             const s2000 = data.filter(t => String(t.project_number).startsWith('2'));
-            if (s2000.length > 0) {
-                console.log("2000番台サンプル(最初の3件):");
-                s2000.slice(0, 3).forEach(t => console.log({ project_number: t.project_number, is_detailed: t.is_detailed, major_item: t.major_item, start_date: t.start_date, end_date: t.end_date, duration: t.duration }));
-            } else {
-                console.log("DBに2000番台(project_numberが2で始まる)のタスクなし");
-            }
+            console.log("2000番台件数:", s2000.length);
+            s2000.slice(0, 3).forEach((t, i) => {
+                console.log(`[${i}] project_number="${t.project_number}" is_detailed=${t.is_detailed} major_item="${t.major_item}" start_date=${t.start_date} end_date=${t.end_date} duration=${t.duration}`);
+            });
             // ===================
 
             const parsedTasks = data.map(t => {
