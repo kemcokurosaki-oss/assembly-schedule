@@ -3524,7 +3524,7 @@ gantt.locale.labels.section_project_number   = "工事番号";
             // task_type パラメータがある場合（全体工程表から遷移）はガントモードで起動
             //   - task_type=long_lead_item → 長納期品モード
             //   - task_type=drawing        → 図面モード
-            // task_type パラメータがない場合（直接アクセス）は担当別モードで起動
+            // task_type パラメータがない場合（直接アクセス）は全組立タスクをガントで表示
             const taskTypeParam = urlParams.get('task_type');
             requestAnimationFrame(() => {
                 if (taskTypeParam) {
