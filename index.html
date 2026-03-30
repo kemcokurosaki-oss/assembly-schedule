@@ -2083,7 +2083,8 @@
             // 現在表示中のタスク一覧を sort_order 順（nullの場合は id で代替）でソート
             const visibleTasks = gantt.getTaskByTime().filter(t => {
                 const isDetailed = (t.is_detailed === true || String(t.is_detailed).toUpperCase() === 'TRUE');
-                if (!isDetailed) return false;
+                if (isDetailed) return false;
+                if (String(t.major_item) !== '組立') return false;
                 if (String(t.project_number) !== String(projectNumber)) return false;
                 if (currentTaskTypeFilter && String(t.task_type) !== currentTaskTypeFilter) return false;
                 return true;
