@@ -3017,19 +3017,21 @@ gantt.locale.labels.section_project_number   = "工事番号";
         async function initProjectSelect(projectParam) {
             const { data } = await supabaseClient
                 .from('tasks')
-                .select('project_number, customer_name, project_details')
+                .select('project_number, customer_name, project_details, is_detailed, major_item')
                 .neq('is_archived', true);
             if (!data) return;
 
-            // 工事番号ごとの情報をマップに格納
+            // 工事番号ごとの情報をマップに格納（is_detailed=false かつ major_item=組立 のタスクのみ）
             projectMap = new Map();
             data.forEach(item => {
-                if (item.project_number) {
-                    const existing = projectMap.get(item.project_number);
-                    const customer = item.customer_name || (existing ? existing.customer : "");
-                    const details = item.project_details || (existing ? existing.details : "");
-                    projectMap.set(item.project_number, { customer, details });
-                }
+                if (!item.project_number) return;
+                const isDetailed = (item.is_detailed === true || String(item.is_detailed).toUpperCase() === 'TRUE');
+                if (isDetailed) return;
+                if (String(item.major_item) !== '組立') return;
+                const existing = projectMap.get(item.project_number);
+                const customer = item.customer_name || (existing ? existing.customer : "");
+                const details = item.project_details || (existing ? existing.details : "");
+                projectMap.set(item.project_number, { customer, details });
             });
 
             const nums = Array.from(projectMap.keys()).sort();
