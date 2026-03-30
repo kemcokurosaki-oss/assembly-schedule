@@ -3437,7 +3437,8 @@ gantt.locale.labels.section_project_number   = "工事番号";
                         total_sheets:     Number(src.total_sheets)     || 0,
                         completed_sheets: Number(src.completed_sheets) || 0,
                         task_type:        currentTaskTypeFilter || src.task_type || "drawing",
-                        is_detailed:      true,
+                        is_detailed:      false,
+                        major_item:       '組立',
                         sort_order:       baseSO + (i + 1) * 1000
                     };
                 });
