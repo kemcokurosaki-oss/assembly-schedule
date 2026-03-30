@@ -3290,7 +3290,8 @@ gantt.locale.labels.section_project_number   = "工事番号";
                 const _getSO = t => (t.sort_order != null) ? t.sort_order : t.id * 1000;
                 const allTasks = gantt.getTaskByTime().filter(t => {
                     const isDetailed = (t.is_detailed === true || String(t.is_detailed).toUpperCase() === 'TRUE');
-                    if (!isDetailed) return false;
+                    if (isDetailed) return false;
+                    if (String(t.major_item) !== '組立') return false;
                     if (String(t.project_number) !== String(projectNumber)) return false;
                     if (taskType && String(t.task_type) !== String(taskType)) return false;
                     return true;
