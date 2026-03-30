@@ -2765,10 +2765,11 @@ gantt.locale.labels.section_project_number   = "工事番号";
 
             // ===== デバッグ =====
             const s2000 = data.filter(t => String(t.project_number).startsWith('2'));
-            console.log("2000番台件数:", s2000.length);
-            s2000.slice(0, 3).forEach((t, i) => {
-                console.log(`[${i}] project_number="${t.project_number}" is_detailed=${t.is_detailed} major_item="${t.major_item}" start_date=${t.start_date} end_date=${t.end_date} duration=${t.duration}`);
-            });
+            const s2000_kumitate = s2000.filter(t => String(t.major_item) === '組立' && !(t.is_detailed === true || String(t.is_detailed).toUpperCase() === 'TRUE'));
+            const majorItemCount = {};
+            s2000.forEach(t => { const k = String(t.major_item); majorItemCount[k] = (majorItemCount[k] || 0) + 1; });
+            console.log("2000番台 件数:", s2000.length, "/ major_item内訳:", JSON.stringify(majorItemCount));
+            console.log("2000番台 表示対象(組立)件数:", s2000_kumitate.length);
             // ===================
 
             const parsedTasks = data.map(t => {
