@@ -2764,16 +2764,27 @@ gantt.locale.labels.section_project_number   = "工事番号";
             const today = new Date().toISOString().split('T')[0];
 
             const parsedTasks = data.map(t => {
-                // end_dateがnullの場合はバー非表示（has_no_date=true）
-                const hasNoDate = !t.end_date;
-
                 const startDate = t.start_date
                     ? _parseSupabaseDate(t.start_date)
                     : new Date(today + 'T00:00:00Z');
-                // end_dateがnullの場合はダミーの終了日を設定（gantt内部用、バーは非表示）
-                const endDate = t.end_date
-                    ? gantt.date.add(_parseSupabaseDate(t.end_date), 1, 'day')
-                    : gantt.date.add(startDate, 1, 'day');
+
+                let endDate;
+                let hasNoDate = false;
+
+                if (t.end_date) {
+                    // end_date あり → +1日して排他的終了日に
+                    endDate = gantt.date.add(_parseSupabaseDate(t.end_date), 1, 'day');
+                } else if (t.duration && Number(t.duration) > 0) {
+                    // end_date なし・duration あり → start_date + duration日
+                    endDate = gantt.date.add(startDate, Number(t.duration), 'day');
+                } else if (t.start_date) {
+                    // start_date だけあれば1日バーで表示
+                    endDate = gantt.date.add(startDate, 1, 'day');
+                } else {
+                    // 日付が何もなければバー非表示
+                    hasNoDate = true;
+                    endDate = gantt.date.add(startDate, 1, 'day');
+                }
 
                 return {
                     ...t,
