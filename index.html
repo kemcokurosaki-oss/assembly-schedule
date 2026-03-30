@@ -3329,7 +3329,15 @@ gantt.locale.labels.section_project_number   = "工事番号";
                     if (isDetailed) return false;
                     if (String(t.major_item) !== '組立') return false;
                     if (String(t.project_number) !== String(projectNumber)) return false;
-                    if (taskType && String(t.task_type) !== String(taskType)) return false;
+                    if (taskType) {
+                        const tt = t.task_type;
+                        const isNull = (tt === null || tt === undefined || tt === '' || String(tt) === 'null');
+                        if (taskType === 'drawing') {
+                            if (!isNull && String(tt) !== 'drawing') return false;
+                        } else {
+                            if (String(tt) !== String(taskType)) return false;
+                        }
+                    }
                     return true;
                 }).sort((a, b) => _getSO(a) - _getSO(b));
                 const idx = allTasks.findIndex(t => String(t.id) === String(sourceId));
