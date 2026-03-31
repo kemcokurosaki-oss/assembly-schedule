@@ -1129,7 +1129,7 @@
                 });
 
                 const colorClass = getOwnerColorClass(ownerName);
-                const textColor = (["owner-tsuda", "owner-shibata", "owner-matsumoto"].includes(colorClass)) ? "#222" : "#fff";
+                const textColor = "#fff";
 
                 // 4行（タスク種別ごと）を描画
                 TASK_TYPE_ROWS.forEach((rowDef, rowIndex) => {
@@ -1258,7 +1258,7 @@
             };
 
             const colorClass = getOwnerColorClass(ownerName);
-            const textColor = (["owner-tsuda", "owner-shibata", "owner-matsumoto"].includes(colorClass)) ? "#222" : "#fff";
+            const textColor = "#fff";
 
             let html = `<div style="width: ${totalWidth}px;">`;
             ownerTasks.forEach(t => {
@@ -2682,7 +2682,7 @@ gantt.locale.labels.section_project_number   = "工事番号";
         // スタイルとテンプレート
         gantt.templates.task_text = function(start, end, task) {
             const colorClass = getOwnerColorClass(task.owner);
-            const textColor = (["owner-tsuda", "owner-shibata", "owner-matsumoto"].includes(colorClass)) ? "#222" : "#fff";
+            const textColor = "#fff";
             return `<span style="color:${textColor};">${task.text}</span>`;
         };
 
