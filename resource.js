@@ -1,5 +1,3 @@
-// ===== グローバル変数 =====
-
 // グリッド複数行選択
 let _gridSelection = new Set();
 let _lastGridClickId = null;
@@ -9,27 +7,10 @@ let isResourceView = false;
 let lastOwnerName = '';
 let currentResourceOwnerFilter = "";
 let _resourceDetailOwner = null; // null=一覧表示, string=特定担当者の詳細表示
-let isResourceFullscreen = false;
-
-// フィルター状態
-let currentTaskTypeFilter = null; // null = 全表示
-let currentProjectFilter = [];    // 空配列 = 全工事番号
-let currentOwnerFilter = [];      // 空配列 = 全担当者
-
-// 休日セット（"YYYY-MM-DD" 形式で保持）
-let HOLIDAYS = new Set();
-
-// 完了日クリア用
-let _clearingEndDateId = null;
-
-// 定数
 const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
-const GRID_WIDTH = 1000;
+const GRID_WIDTH = 1000; // gantt_design.htmlの既存設定に合わせる
+// 列幅（gantt_design.htmlの既存設定に合わせる）
 const COLUMN_WIDTHS = [55, 55, 250, 50, 60, 30, 40, 40, 60, 60, 60, 60, 110, 44];
-
-// リソース表示の列幅定数
-const RESOURCE_OVERVIEW_COL_WIDTH = 120;
-const RESOURCE_DETAIL_COL_WIDTH   = 350;
 
 // 担当者とCSSクラスのマップ
 const ownerColorMap = {
@@ -48,131 +29,115 @@ const ownerColorMap = {
     "松本(英)": "owner-matsumoto"
 };
 
-// ===== ユーティリティ関数 =====
-
-function getOwnerColorClass(ownerName) {
-    return ownerColorMap[ownerName] || '';
-}
-
-function _toDateStr(date) {
-    if (!date) return '';
-    const d = new Date(date);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
-function _isHoliday(date) {
-    const dateStr = _toDateStr(date);
-    return HOLIDAYS.has(dateStr);
-}
-
-function _getRenderedGanttGridWidth() {
-    const gridEl = document.querySelector('#gantt_here .gantt_grid');
-    if (!gridEl) return GRID_WIDTH;
-    const computed = window.getComputedStyle(gridEl);
-    const width = parseFloat(computed.width);
-    return isNaN(width) ? GRID_WIDTH : width;
-}
-
-// ===== 表示制御機能 =====
-
-function _isTaskDisplayed(task) {
-    const isDetailed = (task.is_detailed === true || String(task.is_detailed).toUpperCase() === 'TRUE');
-    if (isDetailed) return false;
-    if (String(task.major_item) !== '組立') return false;
-    if (currentProjectFilter.length > 0 && !currentProjectFilter.includes(String(task.project_number))) return false;
-    if (currentTaskTypeFilter) {
-        const tt = task.task_type;
-        const isNull = (tt === null || tt === undefined || tt === '' || String(tt) === 'null');
-        if (currentTaskTypeFilter === 'drawing') {
-            if (!isNull && String(tt) !== 'drawing') return false;
-        } else {
-            if (String(tt) !== currentTaskTypeFilter) return false;
-        }
+function getOwnerColorClass(ownerStr) {
+    if (!ownerStr) return "owner-default";
+    const owners = String(ownerStr).split(/[,、\s]+/).map(o => o.trim());
+    for (const owner of owners) {
+        if (ownerColorMap[owner]) return ownerColorMap[owner];
     }
-    if (currentOwnerFilter.length > 0) {
-        const taskOwners = String(task.owner || '').split(/[,、\s]+/).map(o => o.trim());
-        if (!currentOwnerFilter.some(f => taskOwners.includes(f))) return false;
-    }
-    return true;
+    return "owner-default";
 }
 
-function _applyGridSelection() {
-    document.querySelectorAll('#gantt_here .gantt_grid_data .gantt_row[task_id]').forEach(row => {
-        const taskId = row.getAttribute('task_id');
-        if (_gridSelection.has(taskId)) {
-            row.classList.add('selected');
-        } else {
-            row.classList.remove('selected');
-        }
-    });
-}
+// レイアウト定義
+const mainLayout = {
+    css: "gantt_container",
+    rows: [
+        {
+            cols: [
+                { view: "grid", group: "grids", scrollY: "scrollVer" },
+                { resizer: true, width: 1 },
+                { view: "timeline", scrollX: "scrollHor", scrollY: "scrollVer" },
+                { view: "scrollbar", id: "scrollVer" }
+            ]
+        },
+        { view: "scrollbar", id: "scrollHor", height: 20 }
+    ]
+};
 
-function _updateMultiDeleteButton() {
-    const btn = document.getElementById('multi_delete_btn');
-    const count = document.getElementById('multi_delete_count');
-    if (btn && count) {
-        if (_gridSelection.size > 0) {
-            btn.style.display = '';
-            count.textContent = _gridSelection.size;
-        } else {
-            btn.style.display = 'none';
-        }
-    }
-}
+// リサイズ機能
+(function() {
+    let isResizing = false;
+    let animationFrameId = null;
+    const minHeight = 50;
+    const maxHeight = 800;
 
-function _calcInsertAfterSortOrder(sourceId) {
-    const src = gantt.getTask(sourceId);
-    const projectNumber = src.project_number;
-    const taskType = src.task_type;
-    const _getSO = t => (t.sort_order != null) ? t.sort_order : t.id * 1000;
+    window.addEventListener('DOMContentLoaded', () => {
+        const resizer = document.getElementById('resource_resizer');
+        const panel = document.getElementById('resource_panel');
+        const ganttContainer = document.getElementById('gantt_here');
 
-    const allTasks = gantt.getTaskByTime().filter(t => {
-        const isDetailed = (t.is_detailed === true || String(t.is_detailed).toUpperCase() === 'TRUE');
-        if (isDetailed) return false;
-        if (String(t.major_item) !== '組立') return false;
-        if (String(t.project_number) !== String(projectNumber)) return false;
-        if (taskType) {
-            const tt = t.task_type;
-            const isNull = (tt === null || tt === undefined || tt === '' || String(tt) === 'null');
-            if (taskType === 'drawing') {
-                if (!isNull && String(tt) !== 'drawing') return false;
-            } else {
-                if (String(tt) !== taskType) return false;
+        if (!resizer || !panel) return;
+
+        resizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            document.body.style.cursor = 'ns-resize';
+            document.body.style.userSelect = 'none';
+            e.preventDefault();
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+
+            if (animationFrameId) return; // すでに処理待ちならスキップ
+
+            animationFrameId = requestAnimationFrame(() => {
+                const windowHeight = window.innerHeight;
+                let newHeight = windowHeight - e.clientY;
+
+                if (newHeight < minHeight) newHeight = minHeight;
+                if (newHeight > maxHeight) newHeight = maxHeight;
+                if (newHeight > windowHeight * 0.8) newHeight = windowHeight * 0.8;
+
+                // パネルの高さを更新（flexboxによりメインガントは自動で縮む）
+                panel.style.height = newHeight + 'px';
+
+                // ガントのサイズ調整（描画を伴うので負荷が高い）
+                if (window.gantt) {
+                    gantt.setSizes();
+                }
+
+                animationFrameId = null;
+            });
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                document.body.style.cursor = 'default';
+                document.body.style.userSelect = '';
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+                // 最後に確実にサイズを合わせる
+                if (window.gantt) {
+                    gantt.setSizes();
+                }
             }
-        }
-        return true;
-    }).sort((a, b) => _getSO(a) - _getSO(b));
+        });
+    });
+})();
 
-    const idx = allTasks.findIndex(t => String(t.id) === String(sourceId));
-    if (idx < 0) return _getSO(src) + 1000;
+// リソース表示の列幅定数（担当者名 / 詳細タスク名）
+const RESOURCE_OVERVIEW_COL_WIDTH = 120;  // 担当者名列
+const RESOURCE_DETAIL_COL_WIDTH   = 350;  // 詳細表示（工事番号＋タスク名列）
 
-    const afterSO = _getSO(allTasks[idx]);
-    if (idx + 1 < allTasks.length) {
-        return Math.round((afterSO + _getSO(allTasks[idx + 1])) / 2);
-    }
-    return afterSO + 1000;
+// ガントのタイムライン開始位置を取得（グリッド幅＋リサイザー幅を含む正確な値）
+function _getRenderedGanttGridWidth() {
+    // .gantt_task の offsetLeft がタイムライン開始ピクセルと完全一致する
+    const taskEl = document.querySelector('#gantt_here .gantt_task');
+    if (taskEl && taskEl.offsetLeft > 0) return taskEl.offsetLeft;
+    const gridEl = document.querySelector('#gantt_here .gantt_grid');
+    return gridEl ? gridEl.offsetWidth : (gantt.config.grid_width || 834);
 }
-
-function _completionDateClear(taskId) {
-    _clearingEndDateId = taskId;
-    const task = gantt.getTask(taskId);
-    if (task) {
-        task.end_date = null;
-        gantt.updateTask(task.id, task);
-    }
-    _clearingEndDateId = null;
-}
-
-// ===== リソース表示機能 =====
 
 function updateResourceData() {
+    // 指定された担当者の並び順（藤山～松本(英)、外注は除外）
     const targetOwners = ["藤山", "田中(善)", "安岡", "川邊", "檀", "堀井", "宮﨑", "津田", "古村", "柴田", "橋本", "松本(英)"];
 
     const activeOwners = [];
 
+    // 各担当者について、該当するタスクがあるかチェック
     targetOwners.forEach(ownerName => {
         let hasTask = false;
         gantt.eachTask(function(task){
@@ -181,6 +146,7 @@ function updateResourceData() {
             const isAssembly = String(task.major_item) === '組立';
             if (!isDetailed && isAssembly && task.owner) {
                 const owners = String(task.owner).split(/[,、\s]+/).map(o => o.trim());
+                // 田中(善)の場合、"田中(善)" または "田中" が含まれているかチェック
                 if (ownerName === "田中(善)") {
                     if (owners.includes("田中(善)") || owners.includes("田中")) {
                         hasTask = true;
@@ -218,6 +184,7 @@ function renderResourceTimeline(owners) {
     const scale = gantt.getScale();
     const timelineWidth = scale.full_width;
     const columnWidth = scale.col_width;
+    // 全画面時は専用幅、ボトムパネル時はガントのグリッド幅に合わせる
     const actualGridWidth = isResourceFullscreen ? RESOURCE_OVERVIEW_COL_WIDTH : (_getRenderedGanttGridWidth());
     const totalWidth = actualGridWidth + timelineWidth;
     const firstPos = gantt.posFromDate(scale.trace_x[0]);
@@ -237,7 +204,8 @@ function renderResourceTimeline(owners) {
     const todayPos = gantt.posFromDate(new Date());
     const todayLineHtml = `<div class="resource-today-line" style="left: ${todayPos}px;"></div>`;
 
-    let html = `<div style="width: ${totalWidth}px;">`;
+    let html = `<div style="width: ${totalWidth}px;">`; // 全体の幅を指定するコンテナを追加
+    // 担当者1人につき3行（組立・組立場所・出張）で表示
     const TASK_TYPE_ROWS = [
         { type: 'drawing',        label: '組立' },
         { type: 'long_lead_item', label: '組立場所' },
@@ -245,6 +213,7 @@ function renderResourceTimeline(owners) {
     ];
 
     owners.forEach((ownerName) => {
+        // この担当者の全タスクを収集
         const allOwnerTasks = [];
         gantt.eachTask(t => {
             const isDetailed = (t.is_detailed === true || String(t.is_detailed).toLowerCase() === "true" || String(t.is_detailed).toLowerCase() === "t" || String(t.is_detailed) === "1");
@@ -264,14 +233,17 @@ function renderResourceTimeline(owners) {
         const colorClass = getOwnerColorClass(ownerName);
         const textColor = "#fff";
 
+        // 4行（タスク種別ごと）を描画
         TASK_TYPE_ROWS.forEach((rowDef, rowIndex) => {
             const rowTasks = allOwnerTasks.filter(t => String(t.task_type) === rowDef.type);
             const isFirstRow = rowIndex === 0;
             const isLastRow  = rowIndex === TASK_TYPE_ROWS.length - 1;
 
+            // 担当者の区切り線（先頭行の上に太線）
             const borderTop    = isFirstRow ? 'border-top: 2px solid #aaa;' : '';
             const borderBottom = isLastRow  ? 'border-bottom: 2px solid #aaa;' : 'border-bottom: 1px solid #eee;';
 
+            // 左セル：先頭行は担当者名＋ラベル、2行目以降はラベルのみ
             const leftCellContent = isFirstRow
                 ? `<div style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:0 5px;box-sizing:border-box;">
                        <div class="resource-owner-link" onclick="showOwnerDetail('${ownerName}')" title="クリックして詳細表示" style="font-weight:bold;font-size:11px;color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${ownerName}</div>
@@ -313,7 +285,7 @@ function renderResourceTimeline(owners) {
             `;
         });
     });
-    html += `</div>`;
+    html += `</div>`; // 閉じタグを追加
 
     container.innerHTML = html;
     renderResourceCalendarHeader();
@@ -328,6 +300,7 @@ function renderOwnerDetailTimeline(ownerName) {
     const scale = gantt.getScale();
     const timelineWidth = scale.full_width;
     const columnWidth = scale.col_width;
+    // 全画面時は専用幅、ボトムパネル時はガントのグリッド幅に合わせる
     const actualGridWidth = isResourceFullscreen ? RESOURCE_DETAIL_COL_WIDTH : (_getRenderedGanttGridWidth());
     const totalWidth = actualGridWidth + timelineWidth;
     const firstPos = gantt.posFromDate(scale.trace_x[0]);
@@ -347,6 +320,7 @@ function renderOwnerDetailTimeline(ownerName) {
     const todayPos = gantt.posFromDate(new Date());
     const todayLineHtml = `<div class="resource-today-line" style="left: ${todayPos}px;"></div>`;
 
+    // 担当者のタスクを収集
     const ownerTasks = [];
     gantt.eachTask(t => {
         const isDetailed = (t.is_detailed === true || String(t.is_detailed).toLowerCase() === "true" || String(t.is_detailed).toLowerCase() === "t" || String(t.is_detailed) === "1");
@@ -363,6 +337,7 @@ function renderOwnerDetailTimeline(ownerName) {
         if (isMatch) ownerTasks.push(t);
     });
 
+    // 開始日順でソート
     const TASK_TYPE_ORDER = { drawing: 0, long_lead_item: 1, business_trip: 2 };
     ownerTasks.sort((a, b) => {
         const ta = TASK_TYPE_ORDER[a.task_type] ?? 99;
@@ -424,132 +399,12 @@ function renderOwnerDetailTimeline(ownerName) {
     syncResourceScroll();
 }
 
-function showOwnerDetail(ownerName) {
-    _resourceDetailOwner = ownerName;
-    document.getElementById('resource_title').textContent = `${ownerName}さんの詳細リソース状況`;
-    document.getElementById('resource_back_btn').style.display = '';
-    document.querySelector(".resource-header-bar").style.display = '';
-    renderOwnerDetailTimeline(ownerName);
-}
-
-function showOwnerOverview() {
-    _resourceDetailOwner = null;
-    document.getElementById('resource_title').textContent = '担当者別リソース状況';
-    document.getElementById('resource_back_btn').style.display = 'none';
-    document.querySelector(".resource-header-bar").style.display = 'none';
-    updateResourceData();
-}
-
-// ===== UI制御機能 =====
-
-function toggleResourcePanel() {
-    toggleResourceView();
-}
-
-function toggleResourceView() {
-    if (isResourceFullscreen) return;
-    isResourceView = !isResourceView;
-    const btn = document.getElementById("resource_toggle");
-    const panel = document.getElementById("resource_panel");
-
-    if (isResourceView) {
-        btn.innerText = "メイン表示に戻す";
-        updateResourceData();
-        panel.style.display = "flex";
-    } else {
-        btn.innerText = "リソース表示";
-        panel.style.display = "none";
-        _resourceDetailOwner = null;
-        document.getElementById('resource_title').textContent = '担当者別リソース状況';
-        document.getElementById('resource_back_btn').style.display = 'none';
-    }
-
-    setTimeout(() => {
-        gantt.setSizes();
-        const currentLevel = document.querySelector('.zoom-btn.active')?.textContent === '週単位' ? 'week' : 'day';
-        gantt.ext.zoom.setLevel(currentLevel);
-        const s = gantt.getScrollState();
-        gantt.scrollTo(s.x + 1, s.y);
-        requestAnimationFrame(() => gantt.scrollTo(s.x, s.y));
-    }, 50);
-}
-
-function _enterResourceFullscreen() {
-    isResourceFullscreen = true;
-    isResourceView = true;
-    currentOwnerFilter = [];
-    document.querySelectorAll('.owner-chk-item').forEach(chk => { chk.checked = false; });
-    const allChk = document.getElementById('owner_chk_all');
-    if (allChk) allChk.checked = true;
-    _updateOwnerFilterBtn();
-    const panel = document.getElementById("resource_panel");
-    const ganttEl = document.getElementById("gantt_here");
-    const btn = document.getElementById("resource_toggle");
-    panel.classList.add('resource-fullscreen');
-    ganttEl.style.visibility = "hidden";
-    gantt.setSizes();
-    updateResourceData();
-    ganttEl.style.visibility = "";
-    ganttEl.style.display = "none";
-    panel.style.display = "flex";
-    void panel.offsetHeight;
-    btn.style.display = "none";
-    document.getElementById("resource_close_btn").style.display = "none";
-    document.querySelector(".resource-header-bar").style.display = "none";
-    updateFilterButtons();
-    setTimeout(() => {
-        const todayX = gantt.posFromDate(new Date());
-        const scrollX = Math.max(0, todayX - 300);
-        const resourceContent = document.querySelector('.resource-content');
-        if (resourceContent) resourceContent.scrollLeft = scrollX;
-        _syncCalendarHeaderScroll(scrollX);
-    }, 50);
-}
-
-function _exitResourceFullscreen() {
-    isResourceFullscreen = false;
-    isResourceView = false;
-    const panel = document.getElementById("resource_panel");
-    const ganttEl = document.getElementById("gantt_here");
-    const btn = document.getElementById("resource_toggle");
-    panel.classList.remove('resource-fullscreen');
-    panel.style.display = "none";
-    ganttEl.style.display = "";
-    btn.style.display = "";
-    btn.innerText = "リソース表示";
-    document.getElementById("resource_close_btn").style.display = "";
-    updateFilterButtons();
-    setTimeout(() => {
-        gantt.setSizes();
-        const currentLevel = document.querySelector('.zoom-btn.active')?.textContent === '週単位' ? 'week' : 'day';
-        gantt.ext.zoom.setLevel(currentLevel);
-        const s = gantt.getScrollState();
-        gantt.scrollTo(s.x + 1, s.y);
-        requestAnimationFrame(() => gantt.scrollTo(s.x, s.y));
-    }, 50);
-}
-
-function syncResourceScroll() {
-    const left = gantt.getScrollState().x;
-    const resourceContent = document.querySelector(".resource-content");
-    if (resourceContent) resourceContent.scrollLeft = left;
-    _syncCalendarHeaderScroll(left);
-}
-
-function _syncCalendarHeaderScroll(left) {
-    const s1 = document.getElementById('resource_cal_scroll');
-    const s2 = document.getElementById('resource_cal_scroll2');
-    const s3 = document.getElementById('resource_cal_scroll3');
-    if (s1) s1.scrollLeft = left;
-    if (s2) s2.scrollLeft = left;
-    if (s3) s3.scrollLeft = left;
-}
-
-// ===== カレンダーヘッダー機能 =====
+const _DOW_NAMES = ['日', '月', '火', '水', '木', '金', '土'];
 
 function renderResourceCalendarHeader() {
     const header = document.getElementById('resource_calendar_header');
     if (!header) return;
+    // ボトムパネル時はカレンダーヘッダー不要
     if (!isResourceFullscreen) {
         header.style.display = 'none';
         return;
@@ -559,12 +414,14 @@ function renderResourceCalendarHeader() {
     const scale = gantt.getScale();
     const timelineWidth = scale.full_width;
     const columnWidth = scale.col_width;
+    // 全画面時は専用幅、ボトムパネル時はガントのグリッド幅に合わせる
     const actualGridWidth = isResourceFullscreen
         ? (_resourceDetailOwner ? RESOURCE_DETAIL_COL_WIDTH : RESOURCE_OVERVIEW_COL_WIDTH)
         : (_getRenderedGanttGridWidth());
     const dates = scale.trace_x;
     const unit = gantt.getState().scale_unit;
 
+    // 月グループを作成
     const months = [];
     let curMonth = -1, curYear = -1, monthStart = 0;
     dates.forEach((date, i) => {
@@ -576,12 +433,14 @@ function renderResourceCalendarHeader() {
     });
     if (dates.length > 0) months.push({ month: curMonth, year: curYear, count: dates.length - monthStart });
 
+    // 月行HTML
     let monthHtml = '';
     months.forEach(m => {
         const w = m.count * columnWidth;
         monthHtml += `<div class="resource-cal-cell resource-cal-month" style="width:${w}px;min-width:${w}px;height:22px;">${m.year}年${m.month + 1}月</div>`;
     });
 
+    // 日/週行HTML・曜日行HTML（日単位のみ曜日行あり）
     let dayHtml = '';
     let dowHtml = '';
     dates.forEach(date => {
@@ -595,8 +454,9 @@ function renderResourceCalendarHeader() {
 
         if (unit === 'day') {
             dayHtml += `<div class="resource-cal-cell${wkCls}" style="width:${columnWidth}px;min-width:${columnWidth}px;height:18px;${dowColor}">${d}</div>`;
-            dowHtml += `<div class="resource-cal-cell${wkCls}" style="width:${columnWidth}px;min-width:${columnWidth}px;height:18px;${dowColor}">${dayNames[dow]}</div>`;
+            dowHtml += `<div class="resource-cal-cell${wkCls}" style="width:${columnWidth}px;min-width:${columnWidth}px;height:18px;${dowColor}">${_DOW_NAMES[dow]}</div>`;
         } else {
+            // 週単位：日付のみ表示（曜日行なし）
             dayHtml += `<div class="resource-cal-cell" style="width:${columnWidth}px;min-width:${columnWidth}px;height:18px;">${d}</div>`;
         }
     });
@@ -626,8 +486,132 @@ function renderResourceCalendarHeader() {
     `;
 }
 
-// ===== 今日の線と週末表示 =====
+function showOwnerDetail(ownerName) {
+    _resourceDetailOwner = ownerName;
+    document.getElementById('resource_title').textContent = `${ownerName}さんの詳細リソース状況`;
+    document.getElementById('resource_back_btn').style.display = '';
+    document.querySelector(".resource-header-bar").style.display = '';
+    renderOwnerDetailTimeline(ownerName);
+}
 
+function showOwnerOverview() {
+    _resourceDetailOwner = null;
+    document.getElementById('resource_title').textContent = '担当者別リソース状況';
+    document.getElementById('resource_back_btn').style.display = 'none';
+    document.querySelector(".resource-header-bar").style.display = 'none';
+    updateResourceData();
+}
+
+function syncResourceScroll() {
+    const left = gantt.getScrollState().x;
+    const resourceContent = document.querySelector(".resource-content");
+    if (resourceContent) resourceContent.scrollLeft = left;
+    _syncCalendarHeaderScroll(left);
+}
+
+function _syncCalendarHeaderScroll(left) {
+    const s1 = document.getElementById('resource_cal_scroll');
+    const s2 = document.getElementById('resource_cal_scroll2');
+    const s3 = document.getElementById('resource_cal_scroll3');
+    if (s1) s1.scrollLeft = left;
+    if (s2) s2.scrollLeft = left;
+    if (s3) s3.scrollLeft = left;
+}
+
+// リソース全画面モードに入る（フィルターなし初期表示用）
+function _enterResourceFullscreen() {
+    isResourceFullscreen = true;
+    isResourceView = true;
+    // 担当者フィルターをリセット
+    currentOwnerFilter = [];
+    document.querySelectorAll('.owner-chk-item').forEach(chk => { chk.checked = false; });
+    const allChk = document.getElementById('owner_chk_all');
+    if (allChk) allChk.checked = true;
+    _updateOwnerFilterBtn();
+    const panel = document.getElementById("resource_panel");
+    const ganttEl = document.getElementById("gantt_here");
+    const btn = document.getElementById("resource_toggle");
+    panel.classList.add('resource-fullscreen');
+    // ガントを一時的に表示したままリサイズを確定させてからリソース描画
+    ganttEl.style.visibility = "hidden";
+    gantt.setSizes();
+    updateResourceData();
+    ganttEl.style.visibility = "";
+    ganttEl.style.display = "none";
+    panel.style.display = "flex";
+    void panel.offsetHeight; // 強制リフロー：レイアウトを確定させる
+    btn.style.display = "none";
+    document.getElementById("resource_close_btn").style.display = "none";
+    document.querySelector(".resource-header-bar").style.display = "none";
+    updateFilterButtons();
+    // レイアウト確定後にスクロール位置を設定
+    setTimeout(() => {
+        const todayX = gantt.posFromDate(new Date());
+        const scrollX = Math.max(0, todayX - 300);
+        const resourceContent = document.querySelector('.resource-content');
+        if (resourceContent) resourceContent.scrollLeft = scrollX;
+        _syncCalendarHeaderScroll(scrollX);
+    }, 50);
+}
+
+// リソース全画面モードを抜けてガントビューへ
+function _exitResourceFullscreen() {
+    isResourceFullscreen = false;
+    isResourceView = false;
+    const panel = document.getElementById("resource_panel");
+    const ganttEl = document.getElementById("gantt_here");
+    const btn = document.getElementById("resource_toggle");
+    panel.classList.remove('resource-fullscreen');
+    panel.style.display = "none";
+    ganttEl.style.display = "";
+    btn.style.display = ""; // リソースボタンを復元
+    btn.innerText = "リソース表示";
+    document.getElementById("resource_close_btn").style.display = "";
+    updateFilterButtons();
+    setTimeout(() => {
+        gantt.setSizes();
+        const currentLevel = document.querySelector('.zoom-btn.active')?.textContent === '週単位' ? 'week' : 'day';
+        gantt.ext.zoom.setLevel(currentLevel);
+        // スクロールを微小に動かしてタイムラインを強制再描画
+        const s = gantt.getScrollState();
+        gantt.scrollTo(s.x + 1, s.y);
+        requestAnimationFrame(() => gantt.scrollTo(s.x, s.y));
+    }, 50);
+}
+
+function toggleResourceView() {
+    if (isResourceFullscreen) return; // 全画面モード中は通常トグル不可
+    isResourceView = !isResourceView;
+    const btn = document.getElementById("resource_toggle");
+    const panel = document.getElementById("resource_panel");
+
+    if (isResourceView) {
+        btn.innerText = "メイン表示に戻す";
+        // コンテンツを描画してからパネルを表示（古い内容が一瞬見えるのを防ぐ）
+        updateResourceData();
+        panel.style.display = "flex";
+    } else {
+        btn.innerText = "リソース表示";
+        panel.style.display = "none";
+        // 詳細モードをリセット
+        _resourceDetailOwner = null;
+        document.getElementById('resource_title').textContent = '担当者別リソース状況';
+        document.getElementById('resource_back_btn').style.display = 'none';
+    }
+
+    setTimeout(() => {
+        gantt.setSizes();
+        const currentLevel = document.querySelector('.zoom-btn.active')?.textContent === '週単位' ? 'week' : 'day';
+        gantt.ext.zoom.setLevel(currentLevel);
+        // スクロールを微小に動かしてタイムラインを強制再描画
+        const s = gantt.getScrollState();
+        gantt.scrollTo(s.x + 1, s.y);
+        requestAnimationFrame(() => gantt.scrollTo(s.x, s.y));
+    }, 50);
+}
+
+// 今日の赤線：.gantt_task（ビューポート全高）に配置し、
+// .gantt_data_area の offsetLeft でスクロール量を自動取得して位置補正
 function _drawMainTodayLine() {
     const taskEl = document.querySelector('#gantt_here .gantt_task');
     if (!taskEl) return;
@@ -641,17 +625,19 @@ function _drawMainTodayLine() {
         line.style.cssText = 'position:absolute;bottom:0;width:2px;background:#ff4d4d;z-index:6;pointer-events:none;';
         taskEl.appendChild(line);
     }
+    // dataArea.offsetLeft = −スクロール量（DHTMLX がスクロール時に left を負に設定）
+    // posFromDate(today) = タイムライン絶対座標
+    // 合計 = .gantt_task 内でのビュー座標（正しい表示位置）
     line.style.left = (dataArea.offsetLeft + gantt.posFromDate(new Date())) + 'px';
     line.style.top = (gantt.config.scale_height || 60) + 'px';
 }
-
 function _applyGanttScaleWeekendClasses() {
     const scale = gantt.getScale();
     if (!scale || !scale.trace_x) return;
     const dates = scale.trace_x;
     const scaleLines = document.querySelectorAll('#gantt_here .gantt_scale_line');
     scaleLines.forEach((line, lineIdx) => {
-        if (lineIdx === 0) return;
+        if (lineIdx === 0) return; // 月行はスキップ
         const cells = line.querySelectorAll('.gantt_scale_cell');
         cells.forEach((cell, i) => {
             const date = dates[i];
@@ -662,6 +648,46 @@ function _applyGanttScaleWeekendClasses() {
             else if (dow === 6) cell.classList.add('gantt-scale-sat');
         });
     });
+}
+gantt.attachEvent("onGanttRender", _drawMainTodayLine);
+gantt.attachEvent("onGanttRender", _applyGanttScaleWeekendClasses);
+gantt.attachEvent("onGanttRender", function() { requestAnimationFrame(_renderWishDateMarks); });
+gantt.attachEvent("onGanttScroll",  function() { _renderWishDateMarks(); });
+
+function _toDateStr(d) {
+    return d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+}
+
+async function _saveWishDate(taskId, dateStr) {
+    const { error } = await supabaseClient
+        .from('tasks')
+        .update({ wish_date: dateStr })
+        .eq('id', taskId);
+    if (error) console.error('wish_date 保存エラー:', error);
+}
+
+// onBeforeTaskDisplay と同じフィルター条件を手動で判定
+function _isTaskDisplayed(task) {
+    const isDetailed = (task.is_detailed === true || String(task.is_detailed).toUpperCase() === 'TRUE');
+    if (isDetailed) return false;
+    if (String(task.major_item) !== '組立') return false;
+    if (currentProjectFilter.length > 0 && !currentProjectFilter.includes(String(task.project_number))) return false;
+    if (currentTaskTypeFilter) {
+        const tt = task.task_type;
+        const isNull = (tt === null || tt === undefined || tt === '' || String(tt) === 'null');
+        if (currentTaskTypeFilter === 'drawing') {
+            if (!isNull && String(tt) !== 'drawing') return false;
+        } else {
+            if (String(tt) !== currentTaskTypeFilter) return false;
+        }
+    }
+    if (currentOwnerFilter.length > 0) {
+        const taskOwners = String(task.owner || '').split(/[,、\s]+/).map(o => o.trim());
+        if (!currentOwnerFilter.some(f => taskOwners.includes(f))) return false;
+    }
+    return true;
 }
 
 function _renderWishDateMarks() {
@@ -680,6 +706,7 @@ function _renderWishDateMarks() {
         const wishDate = new Date(+parts[0], +parts[1] - 1, +parts[2]);
         if (isNaN(wishDate.getTime())) return;
 
+        // getTaskPosition でDOM不要の垂直位置を取得（タイムライン範囲外でも動作）
         let top;
         if (typeof gantt.getTaskPosition === 'function') {
             const pos = gantt.getTaskPosition(task, task.start_date, task.end_date);
@@ -693,143 +720,85 @@ function _renderWishDateMarks() {
                 : taskNode.offsetTop;
         }
 
-        const wishX = gantt.posFromDate(wishDate);
-        const mark = document.createElement('div');
-        mark.className = 'wish-date-mark';
-        mark.style.cssText = `left:${wishX}px;top:${top}px;`;
-        mark.innerHTML = '▼';
-        mark.title = `${label}: ${task.wish_date}`;
-        dataArea.appendChild(mark);
+        // 完了予定日/手配予定日が希望日を過ぎていたら赤
+        let isOverdue = false;
+        if (!task.has_no_date && task.end_date) {
+            // gantt内部のend_date は排他的終了日（+1日）なので-1日して実際の完了日と比較
+            const actualEnd = gantt.date.add(new Date(task.end_date), -1, 'day');
+            actualEnd.setHours(0, 0, 0, 0);
+            const wishDay = new Date(wishDate);
+            wishDay.setHours(0, 0, 0, 0);
+            isOverdue = actualEnd > wishDay;
+        }
+
+        const x = gantt.posFromDate(gantt.date.add(wishDate, 1, 'day'));
+        const el = document.createElement('div');
+        el.className = 'wish-date-mark';
+        el.style.left = x + 'px';
+        el.style.top  = top + 'px';
+        if (isOverdue) { el.style.color = '#c62828'; el.style.webkitTextStroke = '3.5px #fff'; el.style.paintOrder = 'stroke fill'; }
+        el.title = label + ': ' + task.wish_date;
+        el.textContent = '▼';
+        dataArea.appendChild(el);
+
+        // ドラッグで wish_date を変更
+        el.addEventListener('mousedown', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            const startClientX = e.clientX;
+            const startLeft    = parseFloat(el.style.left);
+            let   currentLeft  = startLeft;
+            el.classList.add('dragging');
+
+            function onMove(e) {
+                currentLeft = startLeft + (e.clientX - startClientX);
+                el.style.left = currentLeft + 'px';
+            }
+            function onUp() {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup',   onUp);
+                el.classList.remove('dragging');
+                const newDate = gantt.dateFromPos
+                    ? gantt.dateFromPos(currentLeft)
+                    : null;
+                if (!newDate) return;
+                const dateStr = _toDateStr(newDate);
+                task.wish_date = dateStr;
+                el.title = label + ': ' + dateStr;
+                _saveWishDate(task.id, dateStr);
+                requestAnimationFrame(_renderWishDateMarks);
+            }
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup',   onUp);
+        });
     });
 }
 
-// ===== フィルター機能 =====
-
-function _updateOwnerFilterBtn() {
-    const btn = document.getElementById('owner_filter_btn');
-    const count = document.getElementById('owner_filter_count');
-    if (btn && count) {
-        if (currentOwnerFilter.length > 0) {
-            btn.classList.add('active');
-            count.textContent = currentOwnerFilter.length;
-        } else {
-            btn.classList.remove('active');
-            count.textContent = '';
-        }
+// スクロール同期のイベント登録
+gantt.attachEvent("onGanttScroll", function (left, top){
+    _drawMainTodayLine(); // 横スクロール時に赤線位置を追従
+    if (!isResourceFullscreen) {
+        // ガント表示中のみリソースパネルと同期（全画面モード中は干渉しない）
+        const resourceContent = document.querySelector(".resource-content");
+        if (resourceContent) resourceContent.scrollLeft = left;
+        _syncCalendarHeaderScroll(left);
     }
-}
+});
 
-function _updateProjectFilterBtn() {
-    const btn = document.getElementById('project_filter_btn');
-    const count = document.getElementById('project_filter_count');
-    if (btn && count) {
-        if (currentProjectFilter.length > 0) {
-            btn.classList.add('active');
-            count.textContent = currentProjectFilter.length;
-        } else {
-            btn.classList.remove('active');
-            count.textContent = '';
-        }
+window.addEventListener('DOMContentLoaded', () => {
+    const resourceContent = document.querySelector(".resource-content");
+    if (resourceContent) {
+        resourceContent.addEventListener('scroll', function() {
+            // カレンダーヘッダーは常に同期
+            _syncCalendarHeaderScroll(this.scrollLeft);
+            // ガント表示中のみガントと同期（全画面モード中は非表示のガントに触らない）
+            if (!isResourceFullscreen) {
+                const ganttScroll = gantt.getScrollState();
+                if (Math.abs(ganttScroll.x - this.scrollLeft) > 1) {
+                    gantt.scrollTo(this.scrollLeft, null);
+                }
+            }
+        });
     }
-}
-
-function _handleOwnerFilterCheckboxChange(e) {
-    const chk = e.target;
-    const owner = chk.value;
-    if (chk.checked) {
-        if (!currentOwnerFilter.includes(owner)) {
-            currentOwnerFilter.push(owner);
-        }
-    } else {
-        currentOwnerFilter = currentOwnerFilter.filter(o => o !== owner);
-    }
-    _updateOwnerFilterBtn();
-    gantt.render();
-    updateResourceData();
-}
-
-function _handleProjectFilterCheckboxChange(e) {
-    const chk = e.target;
-    const project = chk.value;
-    if (chk.checked) {
-        if (!currentProjectFilter.includes(project)) {
-            currentProjectFilter.push(project);
-        }
-    } else {
-        currentProjectFilter = currentProjectFilter.filter(p => p !== project);
-    }
-    _updateProjectFilterBtn();
-    gantt.render();
-    updateResourceData();
-}
-
-// ===== UIイベントハンドラ =====
-
-function toggleDrawingFilter() {
-    currentTaskTypeFilter = currentTaskTypeFilter === 'drawing' ? null : 'drawing';
-    gantt.render();
-}
-
-function toggleLongtermFilter() {
-    currentTaskTypeFilter = currentTaskTypeFilter === 'long_lead_item' ? null : 'long_lead_item';
-    gantt.render();
-}
-
-function toggleTripFilter() {
-    currentTaskTypeFilter = currentTaskTypeFilter === 'business_trip' ? null : 'business_trip';
-    gantt.render();
-}
-
-function setZoom(level, element) {
-    document.querySelectorAll('.zoom-btn').forEach(btn => btn.classList.remove('active'));
-    element.classList.add('active');
-    if (gantt.ext && gantt.ext.zoom) {
-        gantt.ext.zoom.setLevel(level);
-    }
-}
-
-function addTask() {
-    const task = {
-        text: "新規タスク",
-        start_date: new Date(),
-        end_date: new Date(Date.now() + 24 * 60 * 60 * 1000),
-        duration: 1,
-        progress: 0,
-        project_number: "",
-        owner: "",
-        major_item: "組立",
-        task_type: "drawing",
-        is_detailed: false
-    };
-    gantt.addTask(task);
-}
-
-function createTask() {
-    addTask();
-}
-
-function deleteSelectedTasks() {
-    if (_gridSelection.size > 0) {
-        if (confirm(`${_gridSelection.size}件のタスクを削除してもよろしいですか？`)) {
-            _gridSelection.forEach(taskId => {
-                gantt.deleteTask(taskId);
-            });
-            _gridSelection.clear();
-            _updateMultiDeleteButton();
-        }
-    }
-}
-
-function updateFilterButtons() {
-    const drawingBtn = document.getElementById('drawing_filter_btn');
-    const longtermBtn = document.getElementById('longterm_filter_btn');
-    const tripBtn = document.getElementById('trip_filter_btn');
-
-    if (drawingBtn) drawingBtn.classList.toggle('active', currentTaskTypeFilter === 'drawing');
-    if (longtermBtn) longtermBtn.classList.toggle('active', currentTaskTypeFilter === 'long_lead_item');
-    if (tripBtn) tripBtn.classList.toggle('active', currentTaskTypeFilter === 'business_trip');
-}
-
-function updateDisplay() {
-    gantt.render();
-}
+    document.getElementById('resource_close_btn').onclick = toggleResourceView;
+});

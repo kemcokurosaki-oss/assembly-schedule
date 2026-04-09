@@ -1,12 +1,6 @@
 html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: "メイリオ", Meiryo, "MS PGothic", sans-serif; font-size: 12px; }
 .main-container { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-#gantt_here { 
-    flex: 1 !important; 
-    min-height: 0; 
-    overflow: hidden;
-    height: 800px;
-    width: 1200px;
-}
+#gantt_here { flex: 1 !important; min-height: 0; overflow: hidden; }
 .header-panel { background: #fff; padding: 5px 10px; border-bottom: 1px solid #ccc; display: flex; flex-direction: column; gap: 5px; }
 .header-row { display: flex; align-items: center; gap: 15px; width: 100%; }
 .project-info { font-size: 16px; font-weight: bold; color: #333; }
@@ -32,6 +26,14 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
 .btn-filter { background: #f0f0f0; color: #333; border-color: #ccc; font-weight: bold; font-size: 13px; }
 .btn-filter.active { background: #3498db; color: #fff; border-color: #2980b9; }
 .zoom-btn.active { background: #3498db; color: #fff; border-color: #3498db; }
+
+/* レイアウト用 */
+#gantt_here {
+    flex: 1;
+    width: 100%;
+    /* height: 100% を削除して flexbox に任せる */
+    min-height: 0;
+}
 
 /* 独立したリソースパネル */
 #resource_panel {
@@ -68,7 +70,7 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
 #resource_resizer::before {
     content: "";
     position: absolute;
-    top: 4px; 
+    top: 4px;
     left: 0;
     width: 100%;
     height: 4px; /* 境界線と同じ太さ（4px） */
@@ -76,7 +78,7 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
     transition: background 0.2s;
 }
 #resource_resizer:hover::before {
-    background: #3498db; 
+    background: #3498db;
 }
 .resource-header-bar {
     display: flex;
@@ -519,7 +521,7 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
     border-right: 1px solid #ebebeb !important;
     box-sizing: border-box !important;
 }
-.gantt_resource_marker.overtime, 
+.gantt_resource_marker.overtime,
 .gantt_resource_marker_overtime,
 .gantt_resource_marker {
     background-color: #FBAD4F !important;
@@ -528,8 +530,8 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
 }
 
 /* タイムライン上のリソースセルの背景パターンを完全に無効化 */
-.gantt_resource_cell, 
-.gantt_resource_marker, 
+.gantt_resource_cell,
+.gantt_resource_marker,
 .gantt_resource_marker_overtime,
 [class*="gantt_resource_marker"] {
     background-image: none !important;
@@ -578,6 +580,7 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
     background: #546e7a;
     color: #fff;
 }
+
 
 /* リソースセルのスタイル調整 */
 .gantt_matrix_cell {
@@ -781,3 +784,23 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
     background: rgba(0,0,0,0.6); z-index: 200001;
     align-items: center; justify-content: center;
 }
+#setpw_overlay.open { display: flex; }
+#setpw_dialog {
+    background: #fff; border-radius: 8px; padding: 32px 28px;
+    width: 320px; box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+#setpw_dialog h2 { margin: 0 0 8px; font-size: 15px; text-align: center; color: #333; }
+#setpw_dialog p { margin: 0 0 20px; font-size: 12px; text-align: center; color: #888; }
+#setpw_dialog input {
+    width: 100%; padding: 8px 10px; margin-bottom: 12px;
+    border: 1px solid #ccc; border-radius: 4px;
+    font-size: 13px; font-family: 'メイリオ', Meiryo, sans-serif;
+    box-sizing: border-box;
+}
+#setpw_error { color: #e74c3c; font-size: 12px; margin-bottom: 10px; display: none; }
+#setpw_btn_submit {
+    width: 100%; padding: 9px; background: #2ecc71; color: #fff;
+    border: none; border-radius: 4px; font-size: 13px; cursor: pointer;
+    font-family: 'メイリオ', Meiryo, sans-serif;
+}
+#setpw_btn_submit:hover { background: #27ae60; }
