@@ -1774,3 +1774,6 @@ async function initialize() {
         }
     });
 }
+
+// 実行
+initialize();
