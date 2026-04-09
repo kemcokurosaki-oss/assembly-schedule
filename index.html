@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>組立工程表 - 安定版</title>
-    
+
     <!-- DHTMLX Gantt -->
     <link rel="stylesheet" href="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.css">
     <script src="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.js"></script>
@@ -12,8 +12,7 @@
     <!-- 現在はCDNのedge版（通常はStandard版）を読み込んでいるため、一部のPro機能が制限されている可能性があります -->
     <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="main-container">
@@ -28,6 +27,7 @@
                     <button class="btn zoom-btn" onclick="gantt.ext.zoom.setLevel('year')">年</button>
                 </div>
                 <div class="action-controls">
+                    <button class="btn btn-auth" id="auth_btn" onclick="handleAuthBtn()">ログイン</button>
                     <button class="btn btn-primary" id="create_task_btn" onclick="createTask()" style="display:none;">+ 新規タスク追加</button>
                     <button class="btn" id="multi_delete_btn" onclick="deleteSelectedTasks()" style="display:none;">選択削除 (<span id="multi_delete_count">0</span>件)</button>
                     <div style="position:relative;display:none;" id="archive_btn_wrap">
@@ -40,9 +40,9 @@
                 </div>
             </div>
         </div>
-        
+
         <div id="gantt_here" style="width:100%; height:100%;"></div>
-        
+
         <div id="resource_panel">
             <div id="resource_resizer"></div>
             <div class="resource-header-bar">
@@ -143,9 +143,10 @@
         </div>
     </div>
 
-    <link rel="stylesheet" href="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>window.addEventListener('load', function() { console.log('Supabase library loaded:', typeof supabase !== 'undefined'); });</script>
-    <script src="./script.js"></script>
+    <script src="resource.js"></script>
+    <script src="auth.js"></script>
+    <script src="gantt-setup.js"></script>
+    <script src="data.js"></script>
+    <script src="archive.js"></script>
 </body>
 </html>
