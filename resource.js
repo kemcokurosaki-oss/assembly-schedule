@@ -249,13 +249,15 @@ function renderResourceTimeline(owners) {
             const borderBottom = isLastRow  ? 'border-bottom: 2px solid #aaa;' : 'border-bottom: 1px solid #eee;';
 
             // 左セル：先頭行は担当者名＋ラベル、2行目以降はラベルのみ
+            const labelColor = rowDef.type === 'drawing' ? '#2e7d32' : '#0277bd';
+            const labelBg    = rowDef.type === 'drawing' ? '#e8f5e9' : '#e3f2fd';
             const leftCellContent = isFirstRow
                 ? `<div style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:0 5px;box-sizing:border-box;">
                        <div class="resource-owner-link" onclick="showOwnerDetail('${ownerName}')" title="クリックして詳細表示" style="font-weight:bold;font-size:11px;color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${ownerName}</div>
-                       <div style="font-size:10px;color:#555;background:#ddd;border-radius:2px;padding:1px 4px;margin-left:3px;white-space:nowrap;">${rowDef.label}</div>
+                       <div style="font-size:10px;color:${labelColor};background:${labelBg};border-radius:2px;padding:1px 4px;margin-left:3px;white-space:nowrap;font-weight:bold;">${rowDef.label}</div>
                    </div>`
                 : `<div style="width:100%;display:flex;align-items:center;justify-content:flex-end;padding-right:5px;">
-                       <div style="font-size:10px;color:#555;background:#eee;border-radius:2px;padding:1px 4px;white-space:nowrap;">${rowDef.label}</div>
+                       <div style="font-size:10px;color:${labelColor};background:${labelBg};border-radius:2px;padding:1px 4px;white-space:nowrap;font-weight:bold;">${rowDef.label}</div>
                    </div>`;
 
             html += `
