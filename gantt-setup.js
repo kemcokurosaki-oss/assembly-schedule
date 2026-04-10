@@ -1029,6 +1029,7 @@ async function loadData() {
         .order('project_number', { ascending: true })
         .order('machine', { ascending: true, nullsFirst: true })
         .order('unit', { ascending: true, nullsFirst: true })
+        .order('start_date', { ascending: true, nullsFirst: true })
         .order('id', { ascending: true });
 
     if (error) {
