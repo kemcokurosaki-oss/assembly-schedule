@@ -492,7 +492,7 @@ function _updateDetailToolbar(gridWidth) {
     if (_resourceDetailOwner) {
         toolbar.style.display = 'block';
         // ボタン右端をグリッド境界（gridWidth px）に揃える
-        toolbar.innerHTML = `<div style="width:${gridWidth}px;height:100%;display:flex;justify-content:flex-end;align-items:center;padding-right:6px;box-sizing:border-box;"><button onclick="showOwnerOverview()" style="font-size:11px;padding:2px 10px;background:#fff;border:1px solid #aaa;border-radius:3px;cursor:pointer;font-family:'メイリオ',Meiryo,sans-serif;color:#333;">← 一覧に戻る</button></div>`;
+        toolbar.innerHTML = `<div style="width:${gridWidth}px;height:100%;display:flex;justify-content:space-between;align-items:center;padding:0 6px;box-sizing:border-box;"><span style="font-size:13px;font-family:'メイリオ',Meiryo,sans-serif;color:#333;font-weight:bold;">${_resourceDetailOwner}さんの詳細リソース状況</span><button onclick="showOwnerOverview()" style="font-size:11px;padding:2px 10px;background:#fff;border:1px solid #aaa;border-radius:3px;cursor:pointer;font-family:'メイリオ',Meiryo,sans-serif;color:#333;">← 一覧に戻る</button></div>`;
     } else {
         toolbar.style.display = 'none';
         toolbar.innerHTML = '';
