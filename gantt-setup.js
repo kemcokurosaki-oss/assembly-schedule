@@ -1,31 +1,84 @@
 // Gantt 基本構成
 gantt.config.date_format = "%Y-%m-%d";
 
-// 担当者プルダウン用インラインエディタ
+// 担当者プルダウン用インラインエディタ（複数選択対応）
 const OWNER_OPTIONS = ['米澤','桂','香西','古賀','長谷川','早川','廣田','宮本','山下','センティル','増田','外注'];
+
+function _removeOwnerPopup() {
+    const p = document.getElementById('owner_multiselect_popup');
+    if (p) p.remove();
+}
+
 gantt.config.editor_types.owner_select = {
     show: function(id, column, config, placeholder) {
-        const opts = OWNER_OPTIONS.map(n =>
-            `<option value="${n}">${n}</option>`
-        ).join('');
-        placeholder.innerHTML = `<select style="width:100%;height:100%;border:1px solid #7986cb;font-family:メイリオ,sans-serif;font-size:13px;box-sizing:border-box;"><option value=""></option>${opts}</select>`;
+        const task = gantt.getTask(id);
+        const currentValue = (task[column.map_to] || '').trim();
+
+        // セル内：現在値を表示するだけのラベル
+        placeholder.innerHTML = `<div id="owner_ms_label" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:11px;font-family:メイリオ,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default;box-sizing:border-box;padding:0 2px;">${currentValue || '　'}</div>`;
+
+        // 既存ポップアップ削除
+        _removeOwnerPopup();
+
+        const selectedNames = currentValue ? currentValue.split(/[,、\s]+/).map(s => s.trim()).filter(Boolean) : [];
+
+        // チェックボックスポップアップ
+        const popup = document.createElement('div');
+        popup.id = 'owner_multiselect_popup';
+        popup.style.cssText = 'position:fixed;background:#fff;border:1px solid #aaa;border-radius:4px;box-shadow:0 3px 10px rgba(0,0,0,0.25);z-index:99999;padding:4px 0;min-width:120px;max-height:300px;overflow-y:auto;';
+
+        OWNER_OPTIONS.forEach(name => {
+            const label = document.createElement('label');
+            label.style.cssText = 'display:flex;align-items:center;padding:5px 12px;cursor:pointer;font-size:13px;font-family:メイリオ,Meiryo,sans-serif;white-space:nowrap;user-select:none;';
+            label.innerHTML = `<input type="checkbox" value="${name}" style="margin-right:7px;cursor:pointer;">${name}`;
+            const cb = label.querySelector('input');
+            cb.checked = selectedNames.includes(name);
+            // チェック変更時にセルのラベルを更新
+            cb.addEventListener('change', () => {
+                const checked = Array.from(popup.querySelectorAll('input:checked')).map(c => c.value);
+                const lbl = document.getElementById('owner_ms_label');
+                if (lbl) lbl.textContent = checked.join(',') || '　';
+            });
+            popup.appendChild(label);
+        });
+
+        // ポップアップ内のmousedownでフォーカスを奪わない（save_on_blur対策）
+        popup.addEventListener('mousedown', e => e.preventDefault());
+
+        document.body.appendChild(popup);
+
+        // 位置をセルの直下に設定
+        const rect = placeholder.getBoundingClientRect();
+        popup.style.left = rect.left + 'px';
+        popup.style.top  = (rect.bottom + 2) + 'px';
     },
-    hide: function() {},
+    hide: function() {
+        _removeOwnerPopup();
+    },
     set_value: function(value, id, column, node) {
-        node.querySelector('select').value = value || '';
+        const lbl = node.querySelector('#owner_ms_label');
+        if (lbl) lbl.textContent = value || '　';
+        const popup = document.getElementById('owner_multiselect_popup');
+        if (!popup) return;
+        const names = value ? value.split(/[,、\s]+/).map(s => s.trim()).filter(Boolean) : [];
+        popup.querySelectorAll('input[type=checkbox]').forEach(cb => {
+            cb.checked = names.includes(cb.value);
+        });
     },
     get_value: function(id, column, node) {
-        return node.querySelector('select').value;
+        const popup = document.getElementById('owner_multiselect_popup');
+        if (!popup) {
+            const task = gantt.getTask(id);
+            return task[column.map_to] || '';
+        }
+        return Array.from(popup.querySelectorAll('input:checked')).map(c => c.value).join(',');
     },
     is_changed: function(value, id, column, node) {
         return value !== this.get_value(id, column, node);
     },
     is_valid: function() { return true; },
     save: function() {},
-    focus: function(node) {
-        var sel = node.querySelector('select');
-        if (sel) sel.focus();
-    }
+    focus: function(node) {}
 };
 
 // ステータスプルダウン用インラインエディタ
