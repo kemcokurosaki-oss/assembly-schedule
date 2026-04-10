@@ -14,19 +14,18 @@ const COLUMN_WIDTHS = [55, 55, 250, 50, 60, 30, 40, 40, 60, 60, 60, 60, 110, 44]
 
 // 担当者とCSSクラスのマップ
 const ownerColorMap = {
-    "藤山": "owner-fujiyama",
-    "田中(善)": "owner-tanaka",
-    "田中": "owner-tanaka",
-    "安岡": "owner-yasuoka",
-    "川邊": "owner-kawabe",
-    "檀": "owner-dan",
-    "堀井": "owner-horii",
-    "宮﨑": "owner-miyazaki",
-    "津田": "owner-tsuda",
-    "古村": "owner-komura",
-    "柴田": "owner-shibata",
-    "橋本": "owner-hashimoto",
-    "松本(英)": "owner-matsumoto"
+    "米澤":       "owner-yonezawa",
+    "桂":         "owner-katsura",
+    "香西":       "owner-kozai",
+    "古賀":       "owner-koga",
+    "長谷川":     "owner-hasegawa",
+    "早川":       "owner-hayakawa",
+    "廣田":       "owner-hirota",
+    "宮本":       "owner-miyamoto",
+    "山下":       "owner-yamashita",
+    "センティル": "owner-senthil",
+    "増田":       "owner-masuda",
+    "外注":       "owner-gaichuu"
 };
 
 function getOwnerColorClass(ownerStr) {

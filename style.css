@@ -179,20 +179,20 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
 }
 .resource-bar-text { padding: 0 5px; overflow: hidden; text-overflow: ellipsis; }
 
-/* 担当者ごとのバーの色設定（濃いグレー統一） */
-.owner-fujiyama { background-color: #666666 !important; border-color: #555555 !important; color: #fff !important; }
-.owner-tanaka { background-color: #666666 !important; border-color: #555555 !important; color: #fff !important; }
-.owner-yasuoka { background-color: #666666 !important; border-color: #555555 !important; color: #fff !important; }
-.owner-kawabe { background-color: #666666 !important; border-color: #555555 !important; color: #fff !important; }
-.owner-dan { background-color: #666666 !important; border-color: #555555 !important; color: #fff !important; }
-.owner-horii { background-color: #666666 !important; border-color: #555555 !important; color: #fff !important; }
-.owner-miyazaki { background-color: #666666 !important; border-color: #555555 !important; color: #fff !important; }
-.owner-tsuda { background-color: #666666 !important; border-color: #555555 !important; color: #fff !important; }
-.owner-komura { background-color: #666666 !important; border-color: #555555 !important; color: #fff !important; }
-.owner-shibata { background-color: #666666 !important; border-color: #555555 !important; color: #fff !important; }
-.owner-hashimoto { background-color: #666666 !important; border-color: #555555 !important; color: #fff !important; }
-.owner-matsumoto { background-color: #666666 !important; border-color: #555555 !important; color: #fff !important; }
-.owner-default { background-color: #666666 !important; border-color: #555555 !important; color: #fff !important; }
+/* 担当者ごとのバーの色設定（12色） */
+.owner-yonezawa  { background-color: #1565c0 !important; border-color: #0d47a1 !important; color: #fff !important; } /* 米澤: ブルー */
+.owner-katsura   { background-color: #2e7d32 !important; border-color: #1b5e20 !important; color: #fff !important; } /* 桂: グリーン */
+.owner-kozai     { background-color: #c62828 !important; border-color: #b71c1c !important; color: #fff !important; } /* 香西: レッド */
+.owner-koga      { background-color: #7b1fa2 !important; border-color: #6a1b9a !important; color: #fff !important; } /* 古賀: パープル */
+.owner-hasegawa  { background-color: #7cb342 !important; border-color: #558b2f !important; color: #fff !important; } /* 長谷川: 黄緑 */
+.owner-hayakawa  { background-color: #0097a7 !important; border-color: #00737f !important; color: #fff !important; } /* 早川: シアンブルー */
+.owner-hirota    { background-color: #880e4f !important; border-color: #6a0136 !important; color: #fff !important; } /* 廣田: ダークローズ */
+.owner-miyamoto  { background-color: #f57f17 !important; border-color: #e65100 !important; color: #fff !important; } /* 宮本: アンバー */
+.owner-yamashita { background-color: #4e342e !important; border-color: #3e2723 !important; color: #fff !important; } /* 山下: ブラウン */
+.owner-senthil   { background-color: #c8a200 !important; border-color: #a08000 !important; color: #fff !important; } /* センティル: 黄色 */
+.owner-masuda    { background-color: #e91e63 !important; border-color: #c2185b !important; color: #fff !important; } /* 増田: ホットピンク */
+.owner-gaichuu   { background-color: #546e7a !important; border-color: #37474f !important; color: #fff !important; } /* 外注: ブルーグレー */
+.owner-default   { background-color: #78909c !important; border-color: #546e7a !important; color: #fff !important; }
 
 /* コンフリクト背景（無効化：透明に設定） */
 .resource-cell-conflict-bg {
