@@ -233,7 +233,14 @@ function renderResourceTimeline(owners) {
 
         // 4行（タスク種別ごと）を描画
         TASK_TYPE_ROWS.forEach((rowDef, rowIndex) => {
-            const rowTasks = allOwnerTasks.filter(t => String(t.task_type) === rowDef.type);
+            const rowTasks = allOwnerTasks.filter(t => {
+                const tt = t.task_type;
+                if (rowDef.type === 'drawing') {
+                    // null・空・'drawing' はすべて組立タスクとして扱う
+                    return !tt || tt === '' || String(tt) === 'null' || tt === 'drawing';
+                }
+                return String(tt) === rowDef.type;
+            });
             const isFirstRow = rowIndex === 0;
             const isLastRow  = rowIndex === TASK_TYPE_ROWS.length - 1;
 
