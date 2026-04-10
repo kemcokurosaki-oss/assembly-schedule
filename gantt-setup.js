@@ -2,7 +2,7 @@
 gantt.config.date_format = "%Y-%m-%d";
 
 // 担当者プルダウン用インラインエディタ
-const OWNER_OPTIONS = ['藤山','田中','安岡','川邊','檀','堀井','宮﨑','津田','古村','柴田','橋本','松本(英)'];
+const OWNER_OPTIONS = ['米澤','桂','香西','古賀','長谷川','早川','廣田','宮本','山下','センティル','増田','千代盛','外注'];
 gantt.config.editor_types.owner_select = {
     show: function(id, column, config, placeholder) {
         const opts = OWNER_OPTIONS.map(n =>
