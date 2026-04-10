@@ -2,7 +2,7 @@
 gantt.config.date_format = "%Y-%m-%d";
 
 // 担当者プルダウン用インラインエディタ
-const OWNER_OPTIONS = ['米澤','桂','香西','古賀','長谷川','早川','廣田','宮本','山下','センティル','増田','千代盛','外注'];
+const OWNER_OPTIONS = ['米澤','桂','香西','古賀','長谷川','早川','廣田','宮本','山下','センティル','増田','外注'];
 gantt.config.editor_types.owner_select = {
     show: function(id, column, config, placeholder) {
         const opts = OWNER_OPTIONS.map(n =>
@@ -775,21 +775,25 @@ function _progressTemplate(obj) {
 // 図面列定義（デフォルト）
 function _getDrawingColumns() {
     return [
-        { name: "project_number",   label: "工事<br>番号",   width: 35, align: "center", editor: { type: "text",   map_to: "project_number" } },
-        { name: "machine",          label: "機械",           width: 35, align: "center", editor: { type: "text",   map_to: "machine" } },
-        { name: "unit",             label: "ユニ",           width: 35, align: "center", editor: { type: "text",   map_to: "unit" } },
-        { name: "text",             label: "組立図面名",     width: 135, tree: true,      editor: { type: "text",   map_to: "text" } },
-        { name: "model_type",       label: "機種",           width: 30, align: "center", editor: { type: "text",   map_to: "model_type" } },
-        { name: "unit2",            label: "ユニ<br>2",      width: 30, align: "center", editor: { type: "text",   map_to: "unit2" } },
-        { name: "dash",             label: "-",              width: 25, align: "center", template: (task) => task.hyphen ?? "-", editor: { type: "text", map_to: "hyphen" } },
-        { name: "characteristic",   label: "特性",           width: 30, align: "center", editor: { type: "text",   map_to: "characteristic" } },
-        { name: "derivation",       label: "派生",           width: 30, align: "center", editor: { type: "text",   map_to: "derivation" } },
-        { name: "owner",            label: "担当",           width: 30, align: "center", editor: { type: "owner_select", map_to: "owner" } },
-        { name: "total_sheets",     label: "総<br>枚数",     width: 30, align: "center", editor: { type: "number", map_to: "total_sheets",     min: 0 } },
-        { name: "completed_sheets", label: "完了<br>枚数",   width: 30, align: "center", editor: { type: "number", map_to: "completed_sheets", min: 0 } },
-        { name: "progress",         label: "進捗",           width: 40, align: "center", template: _progressTemplate },
-        { name: "end_date",         label: "完了<br>予定日", width: 65, align: "center", template: _fmtDate, editor: { type: "completion_date", map_to: "end_date" } },
-        { name: "add_btn",          label: "",               width: 30, align: "center", template: (task) => _isEditor ? `<div class='custom_add_btn' onclick='createTask(${task.id})'>+</div>` : '' }
+        { name: "project_number",  label: "工事番号",   width: 60,  align: "center", editor: { type: "text", map_to: "project_number" } },
+        { name: "machine",         label: "機械",       width: 40,  align: "center", editor: { type: "text", map_to: "machine" } },
+        { name: "unit",            label: "ユニット",   width: 50,  align: "center", editor: { type: "text", map_to: "unit" } },
+        { name: "text",            label: "タスク",     width: 150, tree: true,      editor: { type: "text", map_to: "text" } },
+        { name: "notes",           label: "備考",       width: 100, align: "left",   editor: { type: "text", map_to: "notes" } },
+        { name: "owner",           label: "担当",       width: 40,  align: "center", editor: { type: "owner_select", map_to: "owner" } },
+        { name: "start_date",      label: "開始",       width: 65,  align: "center",
+          template: function(task) {
+            if (!task.start_date) return "";
+            const d = task.start_date;
+            const yy = String(d.getFullYear()).slice(-2);
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return yy + '/' + mm + '/' + dd;
+          },
+          editor: { type: "start_date_editor", map_to: "start_date" } },
+        { name: "end_date",        label: "終了",       width: 65,  align: "center", template: _fmtDate, editor: { type: "completion_date", map_to: "end_date" } },
+        { name: "duration",        label: "日数",       width: 35,  align: "center", editor: { type: "number", map_to: "duration", min: 1 } },
+        { name: "add_btn",         label: "",           width: 25,  align: "center", template: (task) => _isEditor ? `<div class='custom_add_btn' onclick='createTask(${task.id})'>+</div>` : '' }
     ];
 }
 // 図面列合計: 18+18+120+16+16+14+16+16+16+16+16+20+20+20 = 342px
@@ -1173,8 +1177,8 @@ function updateFilterButtons() {
     const headerPanel = document.querySelector('.header-panel');
     if (headerPanel) headerPanel.style.padding = isResourceFullscreen ? '6px 10px 3px 10px' : '';
     // 担当別モード中は2・3行目を非表示、新規タスク追加ボタンも非表示
-    const projectInfoRow = document.getElementById('project_info_row');
-    if (projectInfoRow) projectInfoRow.style.display = isResourceFullscreen ? 'none' : '';
+    const zoomRow = document.getElementById('zoom_row');
+    if (zoomRow) zoomRow.style.display = isResourceFullscreen ? 'none' : '';
     const dropdownsRow = document.getElementById('dropdowns_row');
     if (dropdownsRow) dropdownsRow.style.display = isResourceFullscreen ? 'none' : '';
     // 担当者フィルターは非担当別モードのみ表示
@@ -1246,13 +1250,15 @@ function toggleTripFilter()     { setTaskTypeFilter('business_trip'); }
 // 工事番号セレクトボックスの表示更新
 function updateDisplay() {
     const display = document.getElementById('project_display');
-    if (currentProjectFilter.length === 0) {
-        display.innerText = "工事番号: 全表示";
-    } else if (currentProjectFilter.length === 1) {
-        const info = projectMap.get(currentProjectFilter[0]);
-        display.innerText = `${currentProjectFilter[0]} ${info?.customer || ""} ${info?.details || ""}`;
-    } else {
-        display.innerText = currentProjectFilter.join('、');
+    if (display) {
+        if (currentProjectFilter.length === 0) {
+            display.innerText = "工事番号: 全表示";
+        } else if (currentProjectFilter.length === 1) {
+            const info = projectMap.get(currentProjectFilter[0]);
+            display.innerText = `${currentProjectFilter[0]} ${info?.customer || ""} ${info?.details || ""}`;
+        } else {
+            display.innerText = currentProjectFilter.join('、');
+        }
     }
 
     if (isResourceView) {

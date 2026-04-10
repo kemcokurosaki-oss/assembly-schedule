@@ -15,20 +15,20 @@
 <body>
     <div class="main-container">
         <div class="header-panel">
+            <!-- 1行目: 表示モード切替 + ログアウト -->
             <div class="header-row" id="filter_btn_row">
                 <button class="btn btn-filter" id="resource_home_btn" onclick="returnToResourceView()">担当別</button>
                 <button class="btn btn-filter" id="drawing_filter_btn" onclick="toggleDrawingFilter()">組立</button>
                 <button class="btn btn-filter" id="longterm_filter_btn" onclick="toggleLongtermFilter()">組立場所</button>
                 <button class="btn btn-filter" id="trip_filter_btn" onclick="toggleTripFilter()">出張</button>
-                <div class="zoom-controls" style="margin-left: auto;">
-                    <button class="btn zoom-btn active" onclick="setZoom('day', this)">日単位</button>
-                    <button class="btn zoom-btn" onclick="setZoom('week', this)">週単位</button>
-                    <button class="btn btn-auth" id="auth_btn" onclick="handleAuthBtn()">ログイン</button>
-                </div>
+                <button class="btn btn-auth" id="auth_btn" onclick="handleAuthBtn()" style="margin-left:auto;">ログイン</button>
             </div>
-            <div class="header-row" id="project_info_row">
-                <div class="project-info" id="project_display">工事番号: 全表示</div>
+            <!-- 2行目: ズーム -->
+            <div class="header-row" id="zoom_row">
+                <button class="btn zoom-btn active" onclick="setZoom('day', this)">日単位</button>
+                <button class="btn zoom-btn" onclick="setZoom('week', this)">週単位</button>
             </div>
+            <!-- 3行目: フィルター + アクション -->
             <div class="header-row" id="dropdowns_row">
                 <div id="project_filter_wrap" style="position:relative;">
                     <button type="button" id="project_filter_btn" onclick="toggleProjectFilterDropdown()" class="header-select" style="white-space:nowrap; text-align:left;">工事番号: 全表示</button>
@@ -50,16 +50,14 @@
                         <div id="owner_chk_list"></div>
                     </div>
                 </div>
-                <div class="action-controls">
-                    <button class="btn btn-info" id="resource_toggle" onclick="toggleResourceView()">リソース表示</button>
-                    <button class="btn btn-primary" id="create_task_btn" onclick="createTask()" style="display:none;">+ 新規タスク追加</button>
-                    <button class="btn" id="multi_delete_btn" onclick="deleteSelectedTasks()" style="display:none;">選択削除 (<span id="multi_delete_count">0</span>件)</button>
-                    <div style="position:relative;display:none;" id="archive_btn_wrap">
-                        <button class="btn" onclick="toggleArchiveMenu(event)">アーカイブ ▼</button>
-                        <div id="archive_dropdown_menu">
-                            <div onclick="openArchiveManager()">アーカイブ管理</div>
-                            <div onclick="openArchiveList()">アーカイブ一覧</div>
-                        </div>
+                <button class="btn btn-info" id="resource_toggle" onclick="toggleResourceView()">リソース表示</button>
+                <button class="btn btn-primary" id="create_task_btn" onclick="createTask()" style="display:none;">+ 新規タスク追加</button>
+                <button class="btn" id="multi_delete_btn" onclick="deleteSelectedTasks()" style="display:none;">選択削除 (<span id="multi_delete_count">0</span>件)</button>
+                <div style="margin-left:auto; position:relative; display:none;" id="archive_btn_wrap">
+                    <button class="btn" onclick="toggleArchiveMenu(event)">アーカイブ ▼</button>
+                    <div id="archive_dropdown_menu">
+                        <div onclick="openArchiveManager()">アーカイブ管理</div>
+                        <div onclick="openArchiveList()">アーカイブ一覧</div>
                     </div>
                 </div>
             </div>
