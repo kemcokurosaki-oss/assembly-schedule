@@ -1070,10 +1070,24 @@ async function loadData() {
         };
     });
 
-    // sort_order 順（null の場合は id * 1000 で代替）にソート
+    // 工事番号昇順 → 機械別 → ユニット別 にソート
     parsedTasks.sort((a, b) => {
-        if (String(a.project_number) < String(b.project_number)) return -1;
-        if (String(a.project_number) > String(b.project_number)) return 1;
+        // 1. 工事番号
+        const pa = String(a.project_number || '');
+        const pb = String(b.project_number || '');
+        if (pa < pb) return -1;
+        if (pa > pb) return 1;
+        // 2. 機械
+        const ma = String(a.machine || '');
+        const mb = String(b.machine || '');
+        if (ma < mb) return -1;
+        if (ma > mb) return 1;
+        // 3. ユニット
+        const ua = String(a.unit || '');
+        const ub = String(b.unit || '');
+        if (ua < ub) return -1;
+        if (ua > ub) return 1;
+        // 4. sort_order（同一グループ内の細かい順序）
         const sa = (a.sort_order != null) ? a.sort_order : a.id * 1000;
         const sb = (b.sort_order != null) ? b.sort_order : b.id * 1000;
         return sa - sb;
