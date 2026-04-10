@@ -827,6 +827,29 @@ function _getTripColumns() {
         { name: "project_number",  label: "工事番号", width: 60,  align: "center", editor: { type: "text", map_to: "project_number" } },
         { name: "machine",         label: "機械",     width: 40,  align: "center", editor: { type: "text", map_to: "machine" } },
         { name: "unit",            label: "ユニ",     width: 40,  align: "center", editor: { type: "text", map_to: "unit" } },
+        { name: "text",            label: "タスク",   width: 230, tree: true,      editor: { type: "text", map_to: "text" } },
+        { name: "owner",           label: "担当",     width: 40,  align: "center", editor: { type: "owner_select", map_to: "owner" } },
+        { name: "start_date",      label: "開始日",   width: 65,  align: "center",
+          template: function(task) {
+            if (!task.start_date) return "";
+            const d = task.start_date;
+            const yy = String(d.getFullYear()).slice(-2);
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return yy + '/' + mm + '/' + dd;
+          },
+          editor: { type: "start_date_editor", map_to: "start_date" } },
+        { name: "end_date",        label: "終了日",   width: 65,  align: "center", template: _fmtDate, editor: { type: "completion_date", map_to: "end_date" } },
+        { name: "add_btn",         label: "",         width: 25,  align: "center", template: (task) => _isEditor ? `<div class='custom_add_btn' onclick='createTask(${task.id})'>+</div>` : '' }
+    ];
+}
+
+// 計画（組立）列定義
+function _getPlanningColumns() {
+    return [
+        { name: "project_number",  label: "工事番号", width: 60,  align: "center", editor: { type: "text", map_to: "project_number" } },
+        { name: "machine",         label: "機械",     width: 40,  align: "center", editor: { type: "text", map_to: "machine" } },
+        { name: "unit",            label: "ユニ",     width: 40,  align: "center", editor: { type: "text", map_to: "unit" } },
         { name: "text",            label: "タスク",   width: 150, tree: true,      editor: { type: "text", map_to: "text" } },
         { name: "notes",           label: "備考",     width: 100, align: "left",   editor: { type: "text", map_to: "notes" } },
         { name: "owner",           label: "担当",     width: 40,  align: "center", editor: { type: "owner_select", map_to: "owner" } },
@@ -845,13 +868,13 @@ function _getTripColumns() {
         { name: "add_btn",         label: "",         width: 25,  align: "center", template: (task) => _isEditor ? `<div class='custom_add_btn' onclick='createTask(${task.id})'>+</div>` : '' }
     ];
 }
-// 計画/出張列合計: 60+35+35+245+35+65+65+25 = 565px
 
 // 列セット切り替え
 function switchColumns(filterType) {
     let cols;
     if (filterType === 'long_lead_item') cols = _getLongtermColumns();
-    else if (filterType === 'business_trip' || filterType === 'planning') cols = _getTripColumns();
+    else if (filterType === 'business_trip') cols = _getTripColumns();
+    else if (filterType === 'planning') cols = _getPlanningColumns();
     else cols = _getDrawingColumns();
     gantt.config.columns = cols;
     _setLayout(_getColsSum(cols));
