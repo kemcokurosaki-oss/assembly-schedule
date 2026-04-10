@@ -357,6 +357,7 @@ async function createTask(afterTaskId) {
             total_sheets: 0,
             completed_sheets: 0,
             task_type: currentTaskTypeFilter || "drawing",
+            is_business_trip: currentTaskTypeFilter === 'business_trip',
             wish_date: _toDateStr(today),
             is_detailed: false,
             major_item: '組立',
@@ -432,6 +433,7 @@ gantt.attachEvent("onAfterTaskUpdate", async function(id, item) {
                 completed_sheets: Number(item.completed_sheets) || 0,
                 duration: item.duration,
                 task_type: item.task_type || currentTaskTypeFilter || "drawing",
+                is_business_trip: (item.task_type || currentTaskTypeFilter) === 'business_trip',
                 wish_date: item.wish_date || null
             })
             .eq('id', id);

@@ -132,7 +132,7 @@ function _getRenderedGanttGridWidth() {
 
 function updateResourceData() {
     // 指定された担当者の並び順（藤山～松本(英)、外注は除外）
-    const targetOwners = ["藤山", "田中(善)", "安岡", "川邊", "檀", "堀井", "宮﨑", "津田", "古村", "柴田", "橋本", "松本(英)"];
+    const targetOwners = ["米澤", "桂", "香西", "古賀", "長谷川", "早川", "廣田", "宮本", "山下", "センティル", "増田", "外注"];
 
     const activeOwners = [];
 
@@ -206,9 +206,8 @@ function renderResourceTimeline(owners) {
     let html = `<div style="width: ${totalWidth}px;">`; // 全体の幅を指定するコンテナを追加
     // 担当者1人につき3行（組立・組立場所・出張）で表示
     const TASK_TYPE_ROWS = [
-        { type: 'drawing',        label: '組立' },
-        { type: 'long_lead_item', label: '組立場所' },
-        { type: 'business_trip',  label: '出張' },
+        { type: 'drawing',       label: '組立' },
+        { type: 'business_trip', label: '出張' },
     ];
 
     owners.forEach((ownerName) => {
@@ -337,7 +336,7 @@ function renderOwnerDetailTimeline(ownerName) {
     });
 
     // 開始日順でソート
-    const TASK_TYPE_ORDER = { drawing: 0, long_lead_item: 1, business_trip: 2 };
+    const TASK_TYPE_ORDER = { drawing: 0, business_trip: 1 };
     ownerTasks.sort((a, b) => {
         const ta = TASK_TYPE_ORDER[a.task_type] ?? 99;
         const tb = TASK_TYPE_ORDER[b.task_type] ?? 99;
@@ -353,9 +352,8 @@ function renderOwnerDetailTimeline(ownerName) {
     }
 
     const TASK_TYPE_LABEL = {
-        drawing:        '組立',
-        long_lead_item: '組立場所',
-        business_trip:  '出張',
+        drawing:       '組立',
+        business_trip: '出張',
     };
 
     const colorClass = getOwnerColorClass(ownerName);
