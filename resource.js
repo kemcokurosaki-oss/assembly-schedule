@@ -342,12 +342,8 @@ function renderOwnerDetailTimeline(ownerName) {
         if (isMatch) ownerTasks.push(t);
     });
 
-    // 開始日順でソート
-    const TASK_TYPE_ORDER = { drawing: 0, business_trip: 1 };
+    // 工事番号昇順でソート
     ownerTasks.sort((a, b) => {
-        const ta = TASK_TYPE_ORDER[a.task_type] ?? 99;
-        const tb = TASK_TYPE_ORDER[b.task_type] ?? 99;
-        if (ta !== tb) return ta - tb;
         const pa = String(a.project_number || '');
         const pb = String(b.project_number || '');
         return pa.localeCompare(pb, undefined, { numeric: true });
@@ -358,10 +354,8 @@ function renderOwnerDetailTimeline(ownerName) {
         return;
     }
 
-    const TASK_TYPE_LABEL = {
-        drawing:       '組立',
-        business_trip: '出張',
-    };
+    const TYPE_COL_WIDTH = 30;
+    const PROJ_COL_WIDTH = 60;
 
     const colorClass = getOwnerColorClass(ownerName);
     const textColor = "#fff";
@@ -372,15 +366,16 @@ function renderOwnerDetailTimeline(ownerName) {
         const left = hasDate ? gantt.posFromDate(t.start_date) : 0;
         const right = hasDate ? gantt.posFromDate(t.end_date) : 0;
         const barWidth = hasDate ? Math.max(2, right - left) : 0;
-        const typeLabel = TASK_TYPE_LABEL[String(t.task_type)] || String(t.task_type || '');
+        const tt = t.task_type;
+        const typeLabel = (!tt || tt === '' || String(tt) === 'null' || tt === 'drawing') ? '組立' : (tt === 'business_trip' ? '出張' : tt);
 
         html += `
             <div class="resource-item" style="display: flex; border-bottom: 1px solid #eee; min-height: 30px; height: 30px; align-items: stretch; width: ${totalWidth}px;">
                 <div class="resource-grid-container" style="width: ${actualGridWidth}px; min-width: ${actualGridWidth}px; flex-shrink: 0; display: flex; border-right: 1px solid #ddd; background: #f9f9f9; position: sticky; left: 0; z-index: 5; overflow: hidden;">
-                    <div style="display: flex; align-items: center; padding: 0 6px; font-size: 12px; color: #333; width: 100%; overflow: hidden; white-space: nowrap; gap: 6px;">
-                        <span style="flex-shrink: 0; font-size: 10px; color: #555; background: #e0e0e0; border-radius: 2px; padding: 1px 4px;">${typeLabel}</span>
-                        <span style="flex-shrink: 0; font-weight: bold; color: #546e7a; min-width: 60px;">${t.project_number || '-'}</span>
-                        <span style="overflow: hidden; text-overflow: ellipsis;">${t.text}</span>
+                    <div style="display: flex; align-items: stretch; width: 100%; overflow: hidden; white-space: nowrap;">
+                        <div style="flex-shrink: 0; width: ${TYPE_COL_WIDTH}px; min-width: ${TYPE_COL_WIDTH}px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: ${typeLabel === '出張' ? '#0277bd' : '#2e7d32'}; font-weight: bold; border-right: 1px solid #e0e0e0; background: ${typeLabel === '出張' ? '#e3f2fd' : '#e8f5e9'};">${typeLabel}</div>
+                        <div style="flex-shrink: 0; width: ${PROJ_COL_WIDTH}px; min-width: ${PROJ_COL_WIDTH}px; display: flex; align-items: center; padding: 0 4px; font-size: 12px; font-weight: bold; color: #546e7a; border-right: 1px solid #e0e0e0; overflow: hidden;">${t.project_number || '-'}</div>
+                        <div style="flex: 1; display: flex; align-items: center; padding: 0 6px; font-size: 12px; color: #333; overflow: hidden; text-overflow: ellipsis;">${t.text}</div>
                     </div>
                 </div>
                 <div class="resource-timeline" style="width: ${timelineWidth}px; flex-shrink: 0; position: relative; background: #fff; overflow: hidden; z-index: 2;">
@@ -399,6 +394,7 @@ function renderOwnerDetailTimeline(ownerName) {
     });
     html += `</div>`;
     container.innerHTML = html;
+    _updateDetailToolbar(actualGridWidth);
     renderResourceCalendarHeader();
     syncResourceScroll();
 }
@@ -490,19 +486,29 @@ function renderResourceCalendarHeader() {
     `;
 }
 
+function _updateDetailToolbar(gridWidth) {
+    const toolbar = document.getElementById('resource_detail_toolbar');
+    if (!toolbar) return;
+    if (_resourceDetailOwner) {
+        toolbar.style.display = 'block';
+        // ボタン右端をグリッド境界（gridWidth px）に揃える
+        toolbar.innerHTML = `<div style="width:${gridWidth}px;height:100%;display:flex;justify-content:flex-end;align-items:center;padding-right:6px;box-sizing:border-box;"><button onclick="showOwnerOverview()" style="font-size:11px;padding:2px 10px;background:#fff;border:1px solid #aaa;border-radius:3px;cursor:pointer;font-family:'メイリオ',Meiryo,sans-serif;color:#333;">← 一覧に戻る</button></div>`;
+    } else {
+        toolbar.style.display = 'none';
+        toolbar.innerHTML = '';
+    }
+}
+
 function showOwnerDetail(ownerName) {
     _resourceDetailOwner = ownerName;
     document.getElementById('resource_title').textContent = `${ownerName}さんの詳細リソース状況`;
-    document.getElementById('resource_back_btn').style.display = '';
-    document.querySelector(".resource-header-bar").style.display = '';
     renderOwnerDetailTimeline(ownerName);
 }
 
 function showOwnerOverview() {
     _resourceDetailOwner = null;
+    _updateDetailToolbar(0);
     document.getElementById('resource_title').textContent = '担当者別リソース状況';
-    document.getElementById('resource_back_btn').style.display = 'none';
-    document.querySelector(".resource-header-bar").style.display = 'none';
     updateResourceData();
 }
 
