@@ -1087,7 +1087,11 @@ async function loadData() {
         const ub = String(b.unit || '');
         if (ua < ub) return -1;
         if (ua > ub) return 1;
-        // 4. sort_order（同一グループ内の細かい順序）
+        // 4. 開始日昇順
+        const da = a.start_date ? new Date(a.start_date).getTime() : 0;
+        const db = b.start_date ? new Date(b.start_date).getTime() : 0;
+        if (da !== db) return da - db;
+        // 5. sort_order（同一グループ内の細かい順序）
         const sa = (a.sort_order != null) ? a.sort_order : a.id * 1000;
         const sb = (b.sort_order != null) ? b.sort_order : b.id * 1000;
         return sa - sb;
