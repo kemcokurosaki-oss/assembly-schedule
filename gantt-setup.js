@@ -953,6 +953,8 @@ gantt.templates.task_class = function(start, end, task) {
     return css;
 };
 gantt.templates.timeline_cell_class = function(task, date) {
+    // 週単位表示では列が週単位なので土日判定を適用しない
+    if (gantt.ext.zoom.getCurrentLevel() !== 0) return "";
     if (date.getDay() === 0 || date.getDay() === 6 || _isHoliday(date)) return "weekend";
     return "";
 };
