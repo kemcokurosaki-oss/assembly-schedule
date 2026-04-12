@@ -31,7 +31,11 @@ function _updateUIForAuth(isEditor) {
 }
 
 function handleAuthBtn() {
-    if (_isEditor) { doLogout(); } else { openLoginDialog(); }
+    if (_isEditor) {
+        if (confirm('ログアウトしますか？')) { doLogout(); }
+    } else {
+        openLoginDialog();
+    }
 }
 
 function openLoginDialog() {
