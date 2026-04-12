@@ -598,12 +598,14 @@ function toggleResourceView() {
     const panel = document.getElementById("resource_panel");
 
     if (isResourceView) {
-        btn.innerText = "メイン表示に戻す";
+        btn.innerText = "リソース表示×";
+        btn.classList.add("btn-info");
         // コンテンツを描画してからパネルを表示（古い内容が一瞬見えるのを防ぐ）
         updateResourceData();
         panel.style.display = "flex";
     } else {
         btn.innerText = "リソース表示";
+        btn.classList.remove("btn-info");
         panel.style.display = "none";
         // 詳細モードをリセット
         _resourceDetailOwner = null;
