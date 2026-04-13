@@ -220,7 +220,7 @@ function addHelpItem(container, tip, rect) {
     container.appendChild(hl);
 
     var tipDiv = document.createElement('div');
-    tipDiv.className = 'help-tip';
+    tipDiv.className = 'help-tip' + (tip.wide ? ' help-tip-wide' : '');
     tipDiv.innerHTML = '<div class="help-tip-title">' + (tip.title || '') + '</div>' + tip.text.replace(/\n/g, '<br>');
     container.appendChild(tipDiv);
 
