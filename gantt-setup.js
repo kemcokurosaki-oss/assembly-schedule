@@ -1244,7 +1244,7 @@ document.addEventListener('click', function(e) {
 
 function updateFilterButtons() {
     document.getElementById('resource_home_btn').classList.toggle('active', isResourceFullscreen);
-    document.getElementById('drawing_filter_btn').classList.toggle('active', currentTaskTypeFilter === 'drawing');
+    document.getElementById('drawing_filter_btn').classList.toggle('active', currentTaskTypeFilter === 'assembly');
     document.getElementById('longterm_filter_btn').classList.toggle('active', currentTaskTypeFilter === 'long_lead_item');
     document.getElementById('trip_filter_btn').classList.toggle('active', currentTaskTypeFilter === 'business_trip');
     // 担当別モード中はボタン行の上下余白を均等にして行を調整
