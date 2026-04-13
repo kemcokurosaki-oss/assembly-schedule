@@ -1857,9 +1857,9 @@ async function initialize() {
 
     // 7. 初期表示モードを設定
     // task_type パラメータがある場合（全体工程表から遷移）はガントモードで起動
-    //   - task_type=long_lead_item → 長納期品モード
-    //   - task_type=drawing        → 図面モード
-    // task_type パラメータがない場合（直接アクセス）は全組立タスクをガントで表示
+    //   - task_type=assembly      → 組立モード
+    //   - task_type=business_trip → 出張モード
+    // task_type パラメータがない場合（直接アクセス）は全タスクをガントで表示
     const taskTypeParam = urlParams.get('task_type');
     requestAnimationFrame(() => {
         if (taskTypeParam) {
