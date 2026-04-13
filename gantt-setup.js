@@ -1158,6 +1158,7 @@ function _initOwnerFilterDropdown() {
             <input type="checkbox" class="owner-chk-item" value="${name}" onchange="ownerFilterItemChanged()"> ${name}
         </label>
     `;
+    const assemblySeparator = `<div style="padding:2px 10px 0; font-size:11px; color:#888; font-family:'メイリオ',Meiryo,sans-serif;">組立</div>`;
     const assemblyItems = OWNER_OPTIONS_ASSEMBLY.map(makeItem).join('');
     const separator = `<div style="border-top:1px solid #ccc; margin:4px 0; padding:2px 10px 0; font-size:11px; color:#888; font-family:'メイリオ',Meiryo,sans-serif;">電装</div>`;
     const electricalItems = OWNER_OPTIONS_ELECTRICAL.map(makeItem).join('');
