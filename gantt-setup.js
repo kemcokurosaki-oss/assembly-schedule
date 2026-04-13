@@ -872,7 +872,7 @@ function _getLongtermColumns() {
         { name: "project_number", label: "工事<br>番号", width: 35,  align: "center", editor: { type: "text",   map_to: "project_number" } },
         { name: "machine",    label: "機械",           width: 32,  align: "center", editor: { type: "text",   map_to: "machine" } },
         { name: "unit",       label: "ユニ",           width: 32,  align: "center", editor: { type: "text",   map_to: "unit" } },
-        { name: "text",       label: "品名",           width: 103, tree: true,      editor: { type: "text",   map_to: "text" } },
+        { name: "text",       label: "品名",           width: 103, tree: true, align: "center", editor: { type: "text",   map_to: "text" } },
         { name: "part_number", label: "型式・図番",     width: 85,  align: "left", editor: { type: "text",   map_to: "part_number" } },
         { name: "quantity",   label: "個数",           width: 28,  align: "center", editor: { type: "number", map_to: "quantity", min: 0 } },
         { name: "manufacturer",      label: "メーカー",       width: 70,  align: "center", editor: { type: "text",   map_to: "manufacturer" } },
