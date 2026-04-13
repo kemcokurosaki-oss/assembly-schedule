@@ -846,7 +846,7 @@ function _getDrawingColumns() {
         { name: "project_number",  label: "工番",       width: 45,  align: "center", editor: { type: "text", map_to: "project_number" } },
         { name: "machine",         label: "機械",       width: 40,  align: "center", editor: { type: "text", map_to: "machine" } },
         { name: "unit",            label: "ユニ",       width: 40,  align: "center", editor: { type: "text", map_to: "unit" } },
-        { name: "text",            label: "タスク",     width: 120, tree: true,      editor: { type: "text", map_to: "text" } },
+        { name: "text",            label: "タスク",     width: 120, tree: true, align: "center", editor: { type: "text", map_to: "text" } },
         { name: "notes",           label: "備考",       width: 100, align: "left",   editor: { type: "text", map_to: "notes" } },
         { name: "owner",           label: "担当",       width: 80,  align: "center", editor: { type: "owner_select", map_to: "owner" } },
         { name: "start_date",      label: "開始",       width: 65,  align: "center",
