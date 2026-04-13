@@ -1159,10 +1159,8 @@ function _initOwnerFilterDropdown() {
         </label>
     `;
     const assemblyItems = OWNER_OPTIONS_ASSEMBLY.map(makeItem).join('');
-    // 電装担当者（外注は組立側で既出のため除外）
-    const electricalOnly = OWNER_OPTIONS_ELECTRICAL.filter(n => n !== '外注');
     const separator = `<div style="border-top:1px solid #ccc; margin:4px 0; padding:2px 10px 0; font-size:11px; color:#888; font-family:'メイリオ',Meiryo,sans-serif;">電装</div>`;
-    const electricalItems = electricalOnly.map(makeItem).join('');
+    const electricalItems = OWNER_OPTIONS_ELECTRICAL.map(makeItem).join('');
     list.innerHTML = assemblyItems + separator + electricalItems;
 }
 
