@@ -1806,7 +1806,7 @@ async function initialize() {
                 owner:            src.owner            || "",
                 total_sheets:     Number(src.total_sheets)     || 0,
                 completed_sheets: Number(src.completed_sheets) || 0,
-                task_type:        currentTaskTypeFilter || src.task_type || "assembly",
+                task_type:        currentTaskTypeFilter || src.task_type || null,
                 is_detailed:      false,
                 major_item:       '組立',
                 sort_order:       baseSO + (i + 1) * 1000
