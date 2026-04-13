@@ -776,16 +776,13 @@ gantt.attachEvent("onLightboxSave", function(id, task, is_new){
 gantt.attachEvent("onBeforeLightbox", function(id) {
     if (isResourceFullscreen) return false;
     const task = gantt.getTask(id);
-    const taskType = task ? (task.task_type || 'drawing') : 'drawing';
+    const taskType = task ? (task.task_type || 'assembly') : 'assembly';
     gantt.config.lightbox.sections = _getLightboxSections(taskType);
 
-    if (taskType === 'long_lead_item') {
-        gantt.locale.labels.section_description  = "品名";
-        gantt.locale.labels.section_wish_date_lb = "手配期日";
-    } else if (taskType === 'planning' || taskType === 'business_trip') {
+    if (taskType === 'business_trip') {
         gantt.locale.labels.section_description  = "タスク";
     } else {
-        gantt.locale.labels.section_description  = "組立図面名";
+        gantt.locale.labels.section_description  = "組立図面名 / 品名 / タスク";
         gantt.locale.labels.section_wish_date_lb = "出図希望日";
     }
 
