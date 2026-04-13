@@ -566,7 +566,7 @@ function _getLightboxSections(taskType) {
             { name: "date_range",      height: 30, map_to: "start_date",      type: "date_range" },
         ];
     } else {
-        // drawing（デフォルト）
+        // assembly（デフォルト）
         return [
             { name: "project_number",   height: 30, map_to: "project_number",  type: "textarea" },
             { name: "machine",          height: 30, map_to: "machine",          type: "textarea" },
