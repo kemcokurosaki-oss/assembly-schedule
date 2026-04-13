@@ -971,14 +971,6 @@ gantt.templates.timeline_cell_class = function(task, date) {
     if (date.getDay() === 0 || date.getDay() === 6 || _isHoliday(date)) return "weekend";
     return "";
 };
-// スケールヘッダーの土日・休日セルにクラスを付与
-gantt.templates.scale_cell_class = function(date) {
-    const dow = date.getDay();
-    if (dow === 0) return 'gantt-scale-sun';
-    if (_isHoliday(date)) return 'gantt-scale-holiday';
-    if (dow === 6) return 'gantt-scale-sat';
-    return '';
-};
 
 gantt.templates.grid_row_class = function(start, end, task) {
     return "";
