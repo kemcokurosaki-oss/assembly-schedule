@@ -2,7 +2,12 @@
 gantt.config.date_format = "%Y-%m-%d";
 
 // 担当者プルダウン用インラインエディタ（複数選択対応）
-const OWNER_OPTIONS = ['米澤','桂','香西','古賀','長谷川','早川','廣田','宮本','山下','センティル','増田','外注'];
+const OWNER_OPTIONS_ASSEMBLY   = ['米澤','桂','香西','古賀','長谷川','早川','廣田','宮本','山下','センティル','増田','外注'];
+const OWNER_OPTIONS_ELECTRICAL = ['木村(至)','木村(圭)','守時','外注'];
+// major_item に応じた担当者リストを返す
+function getOwnerOptions(task) {
+    return String(task.major_item) === '電装' ? OWNER_OPTIONS_ELECTRICAL : OWNER_OPTIONS_ASSEMBLY;
+}
 
 function _removeOwnerPopup() {
     const p = document.getElementById('owner_multiselect_popup');
