@@ -1696,7 +1696,7 @@ async function initialize() {
                 owner:            _v('owner', ""),
                 total_sheets:     _n('total_sheets'),
                 completed_sheets: _n('completed_sheets'),
-                task_type:        currentTaskTypeFilter || src.task_type || "drawing",
+                task_type:        currentTaskTypeFilter || src.task_type || "assembly",
                 is_detailed:      false,
                 major_item:       '組立',
                 sort_order:       insertSortOrder
