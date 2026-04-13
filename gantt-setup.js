@@ -1894,5 +1894,56 @@ async function initialize() {
     });
 }
 
+// 担当者カラー凡例モーダル
+function showOwnerLegend() {
+    const existing = document.getElementById('owner_legend_overlay');
+    if (existing) { existing.remove(); return; }
+
+    const assemblyEntries = [
+        { name: '米澤',     cls: 'owner-yonezawa'  },
+        { name: '桂',       cls: 'owner-katsura'   },
+        { name: '香西',     cls: 'owner-kozai'     },
+        { name: '古賀',     cls: 'owner-koga'      },
+        { name: '長谷川',   cls: 'owner-hasegawa'  },
+        { name: '早川',     cls: 'owner-hayakawa'  },
+        { name: '廣田',     cls: 'owner-hirota'    },
+        { name: '宮本',     cls: 'owner-miyamoto'  },
+        { name: '山下',     cls: 'owner-yamashita' },
+        { name: 'センティル', cls: 'owner-senthil' },
+        { name: '増田',     cls: 'owner-masuda'    },
+        { name: '外注',     cls: 'owner-gaichuu'   },
+    ];
+    const electricalEntries = [
+        { name: '木村(至)', cls: 'owner-kimura-i'  },
+        { name: '木村(圭)', cls: 'owner-kimura-k'  },
+        { name: '守時',     cls: 'owner-moritoki'  },
+        { name: '外注(電)', cls: 'owner-gaichuu-e' },
+    ];
+
+    const makeRow = e =>
+        `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+            <div class="${e.cls}" style="width:80px;height:22px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:12px;font-family:メイリオ,sans-serif;">${e.name}</div>
+        </div>`;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'owner_legend_overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;display:flex;align-items:flex-start;justify-content:flex-end;padding:50px 16px 0 0;box-sizing:border-box;';
+    overlay.innerHTML = `
+        <div style="background:#fff;border:1px solid #ccc;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,0.2);padding:14px 16px;min-width:150px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <span style="font-weight:bold;font-size:13px;font-family:メイリオ,sans-serif;">担当者カラー凡例</span>
+                <button onclick="document.getElementById('owner_legend_overlay').remove()" style="border:none;background:none;font-size:16px;cursor:pointer;line-height:1;padding:0 0 0 12px;">×</button>
+            </div>
+            <div style="font-size:11px;color:#888;margin-bottom:6px;font-family:メイリオ,sans-serif;">組立</div>
+            ${assemblyEntries.map(makeRow).join('')}
+            <div style="font-size:11px;color:#888;margin:8px 0 6px;font-family:メイリオ,sans-serif;border-top:1px solid #eee;padding-top:8px;">電装</div>
+            ${electricalEntries.map(makeRow).join('')}
+        </div>`;
+
+    // オーバーレイ背景クリックで閉じる
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+}
+
 // 実行
 initialize();
