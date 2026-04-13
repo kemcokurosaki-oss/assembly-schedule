@@ -17,12 +17,14 @@
         <div class="header-panel">
             <!-- 1行目: 表示モード切替 + ログアウト -->
             <div class="header-row" id="filter_btn_row">
-                <button class="btn btn-filter" id="resource_home_btn" onclick="returnToResourceView()">担当別</button>
-                <button class="btn btn-filter" id="drawing_filter_btn" onclick="toggleDrawingFilter()">組立</button>
-                <button class="btn btn-filter" id="longterm_filter_btn" onclick="toggleLongtermFilter()">組立場所</button>
-                <button class="btn btn-filter" id="trip_filter_btn" onclick="toggleTripFilter()">出張</button>
+                <button class="btn btn-filter" id="resource_home_btn" onclick="returnToResourceView()">👤 担当別</button>
+                <button class="btn btn-filter" id="drawing_filter_btn" onclick="toggleDrawingFilter()">🔧 組立</button>
+                <button class="btn btn-filter" id="longterm_filter_btn" onclick="toggleLongtermFilter()">📍 組立場所</button>
+                <button class="btn btn-filter" id="trip_filter_btn" onclick="toggleTripFilter()">✈ 出張</button>
                 <button class="btn btn-filter" onclick="showOwnerLegend()" style="display:none;">凡例</button>
-                <button class="btn btn-auth" id="auth_btn" onclick="handleAuthBtn()" style="margin-left:auto;">ログイン</button>
+                <div style="margin-left:auto;">
+                    <button class="btn btn-auth" id="auth_btn" onclick="handleAuthBtn()">ログイン</button>
+                </div>
             </div>
             <!-- 2行目: ズーム -->
             <div class="header-row" id="zoom_row">
