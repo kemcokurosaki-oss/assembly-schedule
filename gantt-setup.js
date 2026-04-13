@@ -32,7 +32,7 @@ gantt.config.editor_types.owner_select = {
         popup.id = 'owner_multiselect_popup';
         popup.style.cssText = 'position:fixed;background:#fff;border:1px solid #aaa;border-radius:4px;box-shadow:0 3px 10px rgba(0,0,0,0.25);z-index:99999;padding:4px 0;min-width:120px;max-height:300px;overflow-y:auto;';
 
-        OWNER_OPTIONS.forEach(name => {
+        getOwnerOptions(task).forEach(name => {
             const label = document.createElement('label');
             label.style.cssText = 'display:flex;align-items:center;padding:5px 12px;cursor:pointer;font-size:13px;font-family:メイリオ,Meiryo,sans-serif;white-space:nowrap;user-select:none;';
             label.innerHTML = `<input type="checkbox" value="${name}" style="margin-right:7px;cursor:pointer;">${name}`;
