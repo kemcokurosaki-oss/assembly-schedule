@@ -1744,8 +1744,8 @@ async function initialize() {
             if (currentTaskTypeFilter) {
                 const tt = t.task_type;
                 const isNull = (tt === null || tt === undefined || tt === '' || String(tt) === 'null');
-                if (currentTaskTypeFilter === 'drawing') {
-                    if (!isNull && String(tt) !== 'drawing') return false;
+                if (currentTaskTypeFilter === 'assembly') {
+                    if (!isNull && String(tt) !== 'assembly') return false;
                 } else {
                     if (String(tt) !== currentTaskTypeFilter) return false;
                 }
