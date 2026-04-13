@@ -633,12 +633,14 @@ gantt.form_blocks["textarea_full"] = {
 // 担当プルダウン（ライトボックス用）
 gantt.form_blocks["owner_select_lb"] = {
     render: function(sns) {
-        const opts = ['', ...OWNER_OPTIONS].map(n =>
-            `<option value="${n}">${n || '-- 未選択 --'}</option>`).join('');
-        return `<div class='gantt_cal_ltext'><select style='width:100%;height:30px;border:1px solid #ccc;border-radius:4px;padding:0 5px;'>${opts}</select></div>`;
+        return `<div class='gantt_cal_ltext'><select style='width:100%;height:30px;border:1px solid #ccc;border-radius:4px;padding:0 5px;'></select></div>`;
     },
     set_value: function(node, value, task, sns) {
-        node.querySelector("select").value = value || '';
+        const sel = node.querySelector("select");
+        const opts = ['', ...getOwnerOptions(task)].map(n =>
+            `<option value="${n}">${n || '-- 未選択 --'}</option>`).join('');
+        sel.innerHTML = opts;
+        sel.value = value || '';
     },
     get_value: function(node, task, sns) {
         return node.querySelector("select").value;
