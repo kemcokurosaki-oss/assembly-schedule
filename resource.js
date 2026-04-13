@@ -455,7 +455,7 @@ function renderResourceCalendarHeader() {
         const isSat = dow === 6;
         const isHol = _isHoliday(date);
         // ヘッダーには背景色を適用しない（テキスト色のみで土日・休日を区別）
-        const dowColor = isSun ? 'color:#ffcccc;' : (isSat || isHol) ? 'color:#cce0ff;' : '';
+        const dowColor = isSun || isHol ? 'color:#ef9a9a;' : isSat ? 'color:#90caf9;' : '';
         const d = date.getDate();
 
         if (unit === 'day') {
