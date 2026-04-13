@@ -130,16 +130,23 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
     flex-shrink: 0;
     overflow: hidden;
     background: #546e7a;
-    border-bottom: 2px solid #455a64;
+    border-bottom: 1px solid #607d8b;
     font-family: "メイリオ", Meiryo, sans-serif;
 }
 #resource_calendar_header .cal-row {
     display: flex;
     overflow: hidden;
 }
+/* 横罫線はタイムライン側のみ。縦罫線と同じ 1px / #607d8b */
+#resource_calendar_header .cal-row:first-child #resource_cal_scroll {
+    border-bottom: 1px solid #607d8b;
+}
+#resource_calendar_header .cal-row:nth-child(2):not(:last-child) #resource_cal_scroll2 {
+    border-bottom: 1px solid #607d8b;
+}
 #resource_calendar_header .cal-spacer {
     flex-shrink: 0;
-    border-right: 2px solid #37474f;
+    border-right: 1px solid #607d8b;
     background: #546e7a;
 }
 #resource_cal_scroll {
@@ -158,16 +165,16 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
     overflow: hidden;
     white-space: nowrap;
     border-right: 1px solid #607d8b;
-    background: #455a64;
+    background: #546e7a;
 }
 .resource-cal-month {
-    background: #455a64;
+    background: #546e7a;
     font-weight: bold;
     font-size: 12px;
-    border-right: 1px solid #37474f;
+    border-right: 1px solid #607d8b;
 }
 .resource-cal-weekend {
-    background: #607d8b;
+    background: #546e7a;
 }
 
 /* リソースバーのスタイル（index.htmlから移植） */
