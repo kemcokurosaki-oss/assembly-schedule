@@ -473,22 +473,30 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
     background-color: #e53935 !important; /* 鮮やかさと落ち着きのバランスが良い赤 */
 }
 
-/* タイムラインカレンダーヘッダーをリソースヘッダーと統一 */
+/* タイムラインカレンダーヘッダー（横線はすべて縦罫線と同じ 1px / #607d8b） */
 #gantt_here .gantt_task_scale {
     background: #546e7a !important;
-    border-bottom: 2px solid #455a64 !important;
+    border-bottom: 1px solid #607d8b !important;
 }
 #gantt_here .gantt_scale_line {
     background: #546e7a !important;
+    border-top: none !important;
     border-bottom: none !important;
 }
 #gantt_here .gantt_scale_line:first-child {
-    background: #455a64 !important;
-    border-bottom: 1px solid #37474f !important;
+    background: #546e7a !important;
+    border-bottom: 1px solid #607d8b !important;
 }
+/* 日付行と曜日行の境（3段スケール時のみ） */
+#gantt_here .gantt_scale_line:nth-child(2):not(:last-child) {
+    border-bottom: 1px solid #607d8b !important;
+}
+/* セルは左右のみ。上下は付与しない（行のborderと重なると横線だけ倍の太さに見える） */
 #gantt_here .gantt_scale_cell {
     color: #fff !important;
     border-right: 1px solid #607d8b !important;
+    border-top: none !important;
+    border-bottom: none !important;
     font-family: "メイリオ", Meiryo, sans-serif !important;
     font-size: 11px !important;
     display: flex !important;
@@ -499,13 +507,8 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
 #gantt_here .gantt_scale_line:first-child .gantt_scale_cell {
     font-size: 12px !important;
     font-weight: bold !important;
-    border-right: 1px solid #37474f !important;
-    background: #455a64 !important;
-}
-/* 日・曜日行(2行目以降)の土日背景 */
-#gantt_here .gantt_scale_line:nth-child(n+2) .gantt_scale_cell.gantt-scale-sun,
-#gantt_here .gantt_scale_line:nth-child(n+2) .gantt_scale_cell.gantt-scale-sat {
-    background: #607d8b !important;
+    border-right: 1px solid #607d8b !important;
+    background: #546e7a !important;
 }
 /* 日付行・曜日行(2行目以降)の土日文字色 */
 #gantt_here .gantt_scale_line:nth-child(n+2) .gantt_scale_cell.gantt-scale-sun {
