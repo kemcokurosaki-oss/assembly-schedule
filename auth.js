@@ -111,6 +111,154 @@ async function doSetPassword() {
     }
 }
 
+// ===== ヘルプツールチップ =====
+// 表示モードボタン（activeなものだけ表示）
+var MODE_FILTER_IDS = ['resource_home_btn', 'drawing_filter_btn', 'longterm_filter_btn', 'trip_filter_btn'];
+var MODE_FILTER_TIPS = {
+    'resource_home_btn':   { title: '👤 担当別（表示中）',   text: '担当者別リソースを全画面表示中\nクリックで通常のガントチャートに戻ります' },
+    'drawing_filter_btn':  { title: '🔧 組立（表示中）',     text: '組立タスクのみ表示中（デフォルト）\nクリックで解除します' },
+    'longterm_filter_btn': { title: '📍 組立場所（表示中）', text: '組立場所タスクのみ表示中\nクリックで解除します' },
+    'trip_filter_btn':     { title: '✈ 出張（表示中）',      text: '出張タスクのみ表示中\nクリックで解除します' },
+};
+var HELP_TIPS = [
+    { id: 'zoom_day_btn',        title: '日単位',             text: '1日単位で詳細表示（デフォルト）' },
+    { id: 'zoom_week_btn',       title: '週単位',             text: '週単位で全体スケジュールを把握' },
+    { id: 'help_btn',            title: '？使い方ガイド',     text: 'クリックで各ボタンの説明を表示\nもう一度クリックで閉じます' },
+    { id: 'auth_btn',            title: 'ログイン',           text: '編集者としてログイン\nタスクの追加・編集・削除が可能になります' },
+    { id: 'project_filter_btn',  title: '工事番号フィルター', text: 'クリックで工事番号を選択\n複数選択可。「全表示」で全件に戻す' },
+    { id: 'owner_filter_btn',    title: '担当者フィルター',   text: '特定担当者のみ絞り込み（複数選択可）\nリソース表示時に表示されます' },
+    { id: 'resource_toggle',     title: 'リソース表示',       text: 'ガントチャート下部に\n担当者別の業務状況を並列表示' },
+    { id: 'create_task_btn',     title: '新規タスク追加',     text: 'タスクを末尾に追加します（要ログイン）' },
+    { id: 'archive_btn_wrap',    title: 'アーカイブ',         text: '完了工事の保管・参照\n▼クリックでメニュー表示（要ログイン）' },
+];
+var GRID_TIP = {
+    title: 'グリッド（左側）',
+    text: 'シングルクリック → タスク開始日へスクロール\nダブルクリック → インライン編集ポップアップ\nCtrl+クリック → 複数行選択\n右クリック → コピー・貼り付け・削除メニュー'
+};
+var TIMELINE_TIP = {
+    title: 'タイムライン（右側）',
+    text: 'バーをドラッグ → 開始日・完了日をまとめて変更\n右端をドラッグ → 完了日のみ変更\nダブルクリック → 詳細編集ダイアログ\n▼マーク → ドラッグで出図希望日 / 手配期日を変更'
+};
+var RESOURCE_GRID_TIP = {
+    title: '担当者名列',
+    text: 'クリック → その担当者の詳細ビューに切替\n詳細ビューでは担当者のタスクをタスクタイプ別に一覧表示'
+};
+var RESOURCE_TIMELINE_TIP = {
+    title: 'リソースタイムライン',
+    text: '各担当者の担当タスクがバーで表示されます\n左右にスクロールして期間を確認\n赤い縦線 → 本日の位置'
+};
+
+function openHelp() {
+    var helpBtn = document.getElementById('help_btn');
+    if (helpBtn.classList.contains('help-active')) { closeHelp(); return; }
+    helpBtn.classList.add('help-active');
+    var container = document.getElementById('help_tips_container');
+    container.innerHTML = '<div id="help_overlay_bg"></div>';
+    document.getElementById('help_overlay_bg').addEventListener('click', closeHelp);
+    container.classList.add('open');
+
+    // 表示モードボタン：activeなものだけ
+    MODE_FILTER_IDS.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (!el || !el.classList.contains('active')) return;
+        var rect = el.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return;
+        addHelpItem(container, MODE_FILTER_TIPS[id], rect);
+    });
+
+    // その他のボタン
+    HELP_TIPS.forEach(function(tipDef) {
+        var el = document.getElementById(tipDef.id);
+        if (!el) return;
+        var rect = el.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return;
+        var cs = window.getComputedStyle(el);
+        if (cs.display === 'none' || cs.visibility === 'hidden') return;
+        addHelpItem(container, tipDef, rect);
+    });
+
+    // グリッドとタイムラインをハイライト
+    if (typeof isResourceFullscreen !== 'undefined' && isResourceFullscreen) {
+        var rcEl        = document.querySelector('#resource_panel .resource-content');
+        var firstGridEl = document.querySelector('#resource_content_inner .resource-grid-container');
+        if (rcEl && firstGridEl) {
+            var rcRect = rcEl.getBoundingClientRect();
+            var fgRect = firstGridEl.getBoundingClientRect();
+            if (fgRect.width > 0 && rcRect.height > 0) {
+                var resGridRect = { top: rcRect.top, bottom: rcRect.bottom, left: fgRect.left, right: fgRect.right };
+                var resTlRect   = { top: rcRect.top, bottom: rcRect.bottom, left: fgRect.right, right: rcRect.right };
+                addHelpItem(container, RESOURCE_GRID_TIP, resGridRect);
+                if (resTlRect.right > resTlRect.left) addHelpItem(container, RESOURCE_TIMELINE_TIP, resTlRect);
+            }
+        }
+    } else {
+        var gridEl     = document.querySelector('#gantt_here .gantt_grid');
+        var timelineEl = document.querySelector('#gantt_here .gantt_task');
+        if (gridEl) {
+            var gr = gridEl.getBoundingClientRect();
+            if (gr.width > 0 && gr.height > 0) addHelpItem(container, GRID_TIP, gr);
+        }
+        if (timelineEl) {
+            var tr = timelineEl.getBoundingClientRect();
+            if (tr.width > 0 && tr.height > 0) addHelpItem(container, TIMELINE_TIP, tr);
+        }
+    }
+}
+
+function addHelpItem(container, tip, rect) {
+    var w = rect.right  - rect.left;
+    var h = rect.bottom - rect.top;
+
+    var hl = document.createElement('div');
+    hl.className = 'help-highlight';
+    hl.style.top    = rect.top  + 'px';
+    hl.style.left   = rect.left + 'px';
+    hl.style.width  = w + 'px';
+    hl.style.height = h + 'px';
+    container.appendChild(hl);
+
+    var tipDiv = document.createElement('div');
+    tipDiv.className = 'help-tip';
+    tipDiv.innerHTML = '<div class="help-tip-title">' + (tip.title || '') + '</div>' + tip.text.replace(/\n/g, '<br>');
+    container.appendChild(tipDiv);
+
+    requestAnimationFrame(function() {
+        var vw = window.innerWidth;
+        var vh = window.innerHeight;
+        var tw = tipDiv.offsetWidth;
+        var th = tipDiv.offsetHeight;
+        var top  = rect.bottom + 8;
+        var left = rect.left;
+        if (left + tw > vw - 8) left = vw - tw - 8;
+        if (left < 4) left = 4;
+        if (top + th > vh - 8) {
+            top = rect.top - th - 8;
+            if (top < 4) top = 4;
+            tipDiv.classList.add('tip-above');
+        }
+        tipDiv.style.top  = top  + 'px';
+        tipDiv.style.left = left + 'px';
+    });
+
+    hl.addEventListener('mouseenter', function() { tipDiv.classList.add('tip-visible'); });
+    hl.addEventListener('mouseleave', function() { tipDiv.classList.remove('tip-visible'); });
+    if (tip === HELP_TIPS.find(function(t){ return t.id === 'help_btn'; })) {
+        hl.style.cursor = 'pointer';
+        hl.addEventListener('click', closeHelp);
+    }
+}
+
+function closeHelp() {
+    var helpBtn = document.getElementById('help_btn');
+    if (helpBtn) helpBtn.classList.remove('help-active');
+    var container = document.getElementById('help_tips_container');
+    container.classList.remove('open');
+    container.innerHTML = '';
+}
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeHelp();
+});
+
 // 認証状態の変化を監視（ページロード時・ログイン・ログアウト時に自動で呼ばれる）
 supabaseClient.auth.onAuthStateChange((_event, session) => {
     if (_event === 'PASSWORD_RECOVERY' || (_event === 'SIGNED_IN' && _pageInitType === 'invite')) {
