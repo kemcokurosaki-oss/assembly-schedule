@@ -417,12 +417,13 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
     padding: 0 !important;
 }
 
-/* グリッドヘッダーを青にする */
+/* グリッドヘッダーをカレンダーヘッダーと統一 */
 .gantt_grid_scale, .gantt_grid_head_cell {
-    background-color: #546e7a !important; /* くすんだ青（ブルーグレー） */
+    background-color: #546e7a !important;
     color: #ffffff !important;
-    border-right: 1px solid #455a64 !important;
-    line-height: normal !important; /* 改行を許可するために追加 */
+    border-right: 1px solid #607d8b !important;
+    border-bottom: 1px solid #607d8b !important;
+    line-height: normal !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
