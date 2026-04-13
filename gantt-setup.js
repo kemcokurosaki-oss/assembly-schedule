@@ -1319,7 +1319,7 @@ function setTaskTypeFilter(type) {
     }
 }
 
-function toggleDrawingFilter()  { setTaskTypeFilter('drawing'); }
+function toggleDrawingFilter()  { setTaskTypeFilter('assembly'); }
 function toggleLongtermFilter() { setTaskTypeFilter('long_lead_item'); }
 function toggleTripFilter()     { setTaskTypeFilter('business_trip'); }
 
