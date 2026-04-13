@@ -192,6 +192,9 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
 .owner-senthil   { background-color: #c8a200 !important; border-color: #a08000 !important; color: #fff !important; } /* センティル: 黄色 */
 .owner-masuda    { background-color: #e91e63 !important; border-color: #c2185b !important; color: #fff !important; } /* 増田: ホットピンク */
 .owner-gaichuu   { background-color: #546e7a !important; border-color: #37474f !important; color: #fff !important; } /* 外注: ブルーグレー */
+.owner-kimura-i  { background-color: #00695c !important; border-color: #004d40 !important; color: #fff !important; } /* 木村(至): ティールグリーン */
+.owner-kimura-k  { background-color: #00897b !important; border-color: #00695c !important; color: #fff !important; } /* 木村(圭): ティール */
+.owner-moritoki  { background-color: #f4511e !important; border-color: #bf360c !important; color: #fff !important; } /* 守時: ディープオレンジ */
 .owner-default   { background-color: #78909c !important; border-color: #546e7a !important; color: #fff !important; }
 
 /* コンフリクト背景（無効化：透明に設定） */
