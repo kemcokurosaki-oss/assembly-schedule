@@ -251,6 +251,15 @@ gantt.config.row_height = 30;
 gantt.config.scale_height = 60; // 3段構成（20px * 3）に合わせて調整
 // マーカープラグインは initialize() 内で有効化するため、ここでは行わない
 
+// 土日・休日クラスを返すヘルパー（スケールcssコールバック用）
+function _scaleWeekendClass(date) {
+    var dow = date.getDay();
+    if (dow === 0) return 'gantt-scale-sun';
+    if (_isHoliday(date)) return 'gantt-scale-holiday';
+    if (dow === 6) return 'gantt-scale-sat';
+    return '';
+}
+
 // ズーム設定
 const zoomConfig = {
     levels: [
@@ -260,8 +269,8 @@ const zoomConfig = {
             min_column_width: 22,
             scales: [
                 {unit: "month", step: 1, format: "%Y/%n"},
-                {unit: "day", step: 1, format: "%j"},
-                {unit: "day", step: 1, format: (date) => ["日", "月", "火", "水", "木", "金", "土"][date.getDay()]}
+                {unit: "day", step: 1, format: "%j", css: _scaleWeekendClass},
+                {unit: "day", step: 1, format: (date) => ["日", "月", "火", "水", "木", "金", "土"][date.getDay()], css: _scaleWeekendClass}
             ]
         },
         {
