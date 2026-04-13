@@ -1629,8 +1629,8 @@ async function initialize() {
             if (taskType) {
                 const tt = t.task_type;
                 const isNull = (tt === null || tt === undefined || tt === '' || String(tt) === 'null');
-                if (taskType === 'drawing') {
-                    if (!isNull && String(tt) !== 'drawing') return false;
+                if (taskType === 'assembly') {
+                    if (!isNull && String(tt) !== 'assembly') return false;
                 } else {
                     if (String(tt) !== String(taskType)) return false;
                 }
