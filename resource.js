@@ -454,13 +454,13 @@ function renderResourceCalendarHeader() {
         const isSun = dow === 0;
         const isSat = dow === 6;
         const isHol = _isHoliday(date);
-        const wkCls = (isSun || isSat || isHol) ? ' resource-cal-weekend' : '';
+        // ヘッダーには背景色を適用しない（テキスト色のみで土日・休日を区別）
         const dowColor = isSun ? 'color:#ffcccc;' : (isSat || isHol) ? 'color:#cce0ff;' : '';
         const d = date.getDate();
 
         if (unit === 'day') {
-            dayHtml += `<div class="resource-cal-cell${wkCls}" style="width:${columnWidth}px;min-width:${columnWidth}px;height:18px;${dowColor}">${d}</div>`;
-            dowHtml += `<div class="resource-cal-cell${wkCls}" style="width:${columnWidth}px;min-width:${columnWidth}px;height:18px;${dowColor}">${_DOW_NAMES[dow]}</div>`;
+            dayHtml += `<div class="resource-cal-cell" style="width:${columnWidth}px;min-width:${columnWidth}px;height:18px;${dowColor}">${d}</div>`;
+            dowHtml += `<div class="resource-cal-cell" style="width:${columnWidth}px;min-width:${columnWidth}px;height:18px;${dowColor}">${_DOW_NAMES[dow]}</div>`;
         } else {
             // 週単位：日付のみ表示（曜日行なし）
             dayHtml += `<div class="resource-cal-cell" style="width:${columnWidth}px;min-width:${columnWidth}px;height:18px;">${d}</div>`;
