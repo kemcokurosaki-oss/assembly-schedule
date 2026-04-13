@@ -975,12 +975,12 @@ gantt.attachEvent("onBeforeTaskDisplay", function(id, task) {
         if (!currentProjectFilter.includes(String(task.project_number))) return false;
     }
 
-    // task_typeフィルタ（'drawing'の場合はtask_type=nullも含む）
+    // task_typeフィルタ（'assembly'の場合はtask_type=nullも含む）
     if (currentTaskTypeFilter) {
         const tt = task.task_type;
         const isNull = (tt === null || tt === undefined || tt === '' || String(tt) === 'null');
-        if (currentTaskTypeFilter === 'drawing') {
-            if (!isNull && String(tt) !== 'drawing') return false;
+        if (currentTaskTypeFilter === 'assembly') {
+            if (!isNull && String(tt) !== 'assembly') return false;
         } else {
             if (String(tt) !== currentTaskTypeFilter) return false;
         }
