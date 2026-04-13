@@ -25,7 +25,10 @@ const ownerColorMap = {
     "山下":       "owner-yamashita",
     "センティル": "owner-senthil",
     "増田":       "owner-masuda",
-    "外注":       "owner-gaichuu"
+    "外注":       "owner-gaichuu",
+    "木村(至)":   "owner-kimura-i",
+    "木村(圭)":   "owner-kimura-k",
+    "守時":       "owner-moritoki"
 };
 
 function getOwnerColorClass(ownerStr) {
