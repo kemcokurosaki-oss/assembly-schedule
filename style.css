@@ -510,12 +510,20 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
     border-right: 1px solid #607d8b !important;
     background: #546e7a !important;
 }
-/* 日付行・曜日行(2行目以降)の土日文字色 */
-#gantt_here .gantt_scale_line:nth-child(n+2) .gantt_scale_cell.gantt-scale-sun {
-    color: #ffcccc !important;
+/* 土日・休日の背景＝ヘッダーと同じ色（変化なし） */
+#gantt_here .gantt_scale_cell.gantt-scale-sun,
+#gantt_here .gantt_scale_cell.gantt-scale-sat,
+#gantt_here .gantt_scale_cell.gantt-scale-holiday {
+    background: #546e7a !important;
 }
-#gantt_here .gantt_scale_line:nth-child(n+2) .gantt_scale_cell.gantt-scale-sat {
-    color: #cce0ff !important;
+/* 日曜・休日：濃グレー背景でも判読しやすい明るめの赤 */
+#gantt_here .gantt_scale_cell.gantt-scale-sun,
+#gantt_here .gantt_scale_cell.gantt-scale-holiday {
+    color: #ef9a9a !important;
+}
+/* 土曜：濃グレー背景でも判読しやすい明るめの青 */
+#gantt_here .gantt_scale_cell.gantt-scale-sat {
+    color: #90caf9 !important;
 }
 
 /* リソースの重なり（オーバーラップ）のスタイル（無効化） */
