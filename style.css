@@ -830,6 +830,7 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
     transition: opacity 0.15s;
 }
 .help-tip.tip-visible { opacity: 1; visibility: visible; }
+.help-tip-wide { max-width: none; white-space: nowrap; }
 .help-tip-title { font-weight: bold; font-size: 12px; color: #1565c0; margin-bottom: 3px; }
 .help-tip::before {
     content: ''; position: absolute; top: -8px; left: 12px;
