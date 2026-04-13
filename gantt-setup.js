@@ -963,14 +963,15 @@ gantt.templates.grid_row_class = function(start, end, task) {
     return "";
 };
 
-// フィルタリング（is_detailed=FALSE かつ major_item=組立のみ表示、かつ工事番号フィルタ）
+// フィルタリング（is_detailed=FALSE かつ major_item=組立or電装のみ表示、かつ工事番号フィルタ）
 gantt.attachEvent("onBeforeTaskDisplay", function(id, task) {
     // is_detailed が TRUE のタスクは設計工程表用なので除外
     const isDetailed = (task.is_detailed === true || String(task.is_detailed).toUpperCase() === 'TRUE');
     if (isDetailed) return false;
 
-    // major_item が「組立」のもののみ表示
-    if (String(task.major_item) !== '組立') return false;
+    // major_item が「組立」または「電装」のもののみ表示
+    const mi = String(task.major_item);
+    if (mi !== '組立' && mi !== '電装') return false;
 
     // 工事番号フィルタ
     if (currentProjectFilter.length > 0) {
