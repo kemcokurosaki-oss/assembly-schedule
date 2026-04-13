@@ -485,7 +485,7 @@ gantt.attachEvent("onAfterTaskUpdate", async function(id, item) {
                 total_sheets: Number(item.total_sheets) || 0,
                 completed_sheets: Number(item.completed_sheets) || 0,
                 duration: item.duration,
-                task_type: item.task_type || currentTaskTypeFilter || "drawing",
+                task_type: item.task_type || currentTaskTypeFilter || "assembly",
                 is_business_trip: (item.task_type || currentTaskTypeFilter) === 'business_trip',
                 wish_date: item.wish_date || null
             })
