@@ -584,7 +584,7 @@ function _getLightboxSections(taskType) {
     }
 }
 
-gantt.config.lightbox.sections = _getLightboxSections('drawing');
+gantt.config.lightbox.sections = _getLightboxSections('assembly');
 
 gantt.locale.labels.section_project_number   = "工事番号";
 gantt.locale.labels.section_machine          = "機械";
