@@ -409,7 +409,7 @@ async function createTask(afterTaskId) {
             owner: "",
             total_sheets: 0,
             completed_sheets: 0,
-            task_type: currentTaskTypeFilter || "drawing",
+            task_type: currentTaskTypeFilter || "assembly",
             is_business_trip: currentTaskTypeFilter === 'business_trip',
             wish_date: _toDateStr(today),
             is_detailed: false,
