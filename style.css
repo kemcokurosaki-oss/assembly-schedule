@@ -3,6 +3,7 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
 #gantt_here { flex: 1 !important; min-height: 0; overflow: hidden; }
 .header-panel { background: #fff; padding: 5px 10px; border-bottom: 1px solid #ccc; display: flex; flex-direction: column; gap: 5px; }
 .header-row { display: flex; align-items: center; gap: 15px; width: 100%; }
+#filter_btn_row { gap: 0; border-bottom: 1px solid #ddd; padding-bottom: 0; height: 31px; box-sizing: border-box; }
 .project-info { font-size: 16px; font-weight: bold; color: #333; }
 .zoom-controls { display: flex; gap: 5px; }
 .header-select {
