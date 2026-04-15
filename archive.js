@@ -100,7 +100,7 @@ async function _loadArchiveDetailTable() {
                 <col style="width:38px;">
             </colgroup>
             <thead><tr>
-                <th>タスク名</th><th>機械</th><th>ユニット</th>
+                <th>タスク名</th><th>機械</th><th>ユニ</th>
                 <th>担当</th><th>開始日</th><th>完了予定日</th><th>日数</th>
             </tr></thead>
             <tbody>${data.map(t => `
