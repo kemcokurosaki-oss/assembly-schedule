@@ -135,6 +135,12 @@ function _getRenderedGanttGridWidth() {
 }
 
 function updateResourceData() {
+    // 組立場所モード中は場所別タイムラインを表示
+    if (typeof isLocationMode !== 'undefined' && isLocationMode) {
+        renderLocationResourceTimeline();
+        return;
+    }
+
     // 指定された担当者の並び順（藤山～松本(英)、外注は除外）
     const targetOwners = ["米澤", "桂", "香西", "古賀", "長谷川", "早川", "廣田", "宮本", "山下", "センティル", "増田", "外注"];
 
