@@ -549,6 +549,11 @@ function _enterResourceFullscreen() {
         if (fp) fp.style.display = 'none';
         const zoomRow = document.getElementById('zoom_row');
         if (zoomRow) zoomRow.style.display = '';
+        // 個別に非表示にしたフィルター要素を復元（全画面モードの updateFilterButtons で親行ごと隠れるが個別設定をリセット）
+        ['project_filter_wrap', 'task_name_filter_wrap', 'create_task_btn'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = '';
+        });
     }
     isResourceFullscreen = true;
     isResourceView = true;
