@@ -806,14 +806,21 @@ function _renderWishDateMarks() {
 }
 
 // スクロール同期のイベント登録
+let _todayLineRafId = null;
 gantt.attachEvent("onGanttScroll", function (left, top){
-    _drawMainTodayLine(); // 横スクロール時に赤線位置を追従
+    // スクロール位置の同期は遅延なく即座に実行（ラグ防止）
     if (!isResourceFullscreen) {
         // ガント表示中のみリソースパネルと同期（全画面モード中は干渉しない）
         const resourceContent = document.querySelector(".resource-content");
         if (resourceContent) resourceContent.scrollLeft = left;
         _syncCalendarHeaderScroll(left);
     }
+    // 赤線の再描画はrAFでスロットリング（フレームあたり最大1回）
+    if (_todayLineRafId) cancelAnimationFrame(_todayLineRafId);
+    _todayLineRafId = requestAnimationFrame(function() {
+        _todayLineRafId = null;
+        _drawMainTodayLine();
+    });
 });
 
 window.addEventListener('DOMContentLoaded', () => {
