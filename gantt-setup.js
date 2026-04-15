@@ -2077,5 +2077,234 @@ function showOwnerLegend() {
     document.body.appendChild(overlay);
 }
 
+// ==========================================
+// 組立場所フロアプランビュー
+// ==========================================
+
+function enterLocationMode() {
+    isLocationMode = true;
+
+    // ガントを非表示・ズーム行を非表示
+    document.getElementById('gantt_here').style.display = 'none';
+    const zoomRow = document.getElementById('zoom_row');
+    if (zoomRow) zoomRow.style.display = 'none';
+
+    // フロアプランを表示
+    document.getElementById('location_floorplan').style.display = 'block';
+
+    renderLocationFloorPlan();
+}
+
+function exitLocationMode() {
+    isLocationMode = false;
+
+    // フロアプランを非表示
+    document.getElementById('location_floorplan').style.display = 'none';
+
+    // ズーム行を復元・ガントを表示
+    const zoomRow = document.getElementById('zoom_row');
+    if (zoomRow) zoomRow.style.display = '';
+    document.getElementById('gantt_here').style.display = '';
+
+    // リソース底面パネルが開いていれば閉じる
+    if (isResourceView && !isResourceFullscreen) {
+        toggleResourceView();
+    }
+
+    setTimeout(() => {
+        gantt.setSizes();
+        const level = document.querySelector('.zoom-btn.active')?.textContent === '週単位' ? 'week' : 'day';
+        gantt.ext.zoom.setLevel(level);
+    }, 0);
+}
+
+// ---- スナップショット生成 ----
+function _buildLocationSnapshots() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // 現在進行中または将来のエントリのみ対象
+    // task.end_date は排他的（+1day）なので、実際の終了日 = end_date - 1day
+    const relevant = taskLocationsData.filter(loc => {
+        if (!loc.task) return false;
+        const actualEnd = new Date(loc.task.end_date.getTime() - 86400000);
+        actualEnd.setHours(0, 0, 0, 0);
+        return actualEnd >= today;
+    });
+
+    if (relevant.length === 0) return [];
+
+    // 変化点（開始日・終了日）を収集
+    const changeDates = new Set();
+    changeDates.add(today.getTime()); // 常に今日から開始
+
+    relevant.forEach(loc => {
+        const t = loc.task;
+
+        const s = new Date(t.start_date.getTime());
+        s.setHours(0, 0, 0, 0);
+        if (s > today) changeDates.add(s.getTime());
+
+        const e = new Date(t.end_date.getTime() - 86400000);
+        e.setHours(0, 0, 0, 0);
+        if (e >= today) changeDates.add(e.getTime());
+    });
+
+    const sorted = Array.from(changeDates).sort((a, b) => a - b);
+
+    return sorted.map(dateMs => {
+        const date = new Date(dateMs);
+
+        // この日付でアクティブなタスク
+        const activeLocs = relevant.filter(loc => {
+            const t = loc.task;
+            const s = new Date(t.start_date.getTime()); s.setHours(0, 0, 0, 0);
+            const e = new Date(t.end_date.getTime() - 86400000); e.setHours(0, 0, 0, 0);
+            return s <= date && e >= date;
+        });
+
+        // この日付に終了するタスク（出荷）
+        const endingLocs = relevant.filter(loc => {
+            const e = new Date(loc.task.end_date.getTime() - 86400000);
+            e.setHours(0, 0, 0, 0);
+            return e.getTime() === dateMs;
+        });
+
+        return { date, activeLocs, endingLocs };
+    });
+}
+
+// ---- フロアプラン描画 ----
+function renderLocationFloorPlan() {
+    const container = document.getElementById('location_floorplan');
+    if (!container) return;
+
+    const snapshots = _buildLocationSnapshots();
+
+    if (snapshots.length === 0) {
+        container.innerHTML = '<div style="padding:20px;color:#999;font-family:メイリオ,sans-serif;">組立場所に割り当てられた進行中または予定タスクがありません</div>';
+        return;
+    }
+
+    // レイアウト定数
+    const AREA_COUNT   = 8;
+    const AREA_H       = 75;   // エリア1行の高さ (px)
+    const E1_W         = 115;
+    const E2_W         = 50;   // E2 通路
+    const E3_W         = 115;
+    const ROW_NUM_W    = 22;
+    const COL_HDR_H    = 20;   // 列ヘッダー高さ
+
+    // グリッド列定義 [幅, ラベル, 背景色, 文字色]
+    const COL_DEFS = [
+        { w: ROW_NUM_W, label: '',       bg: '#ddd',    fc: '' },
+        { w: E3_W,      label: 'E3',     bg: '#bbdefb', fc: '#1565c0' },
+        { w: E2_W,      label: '通路',   bg: '#d0d0d0', fc: '#555' },
+        { w: E1_W,      label: 'E1',     bg: '#bbdefb', fc: '#1565c0' },
+    ];
+
+    let html = '<div style="display:flex;align-items:flex-start;gap:16px;padding:12px;">';
+
+    snapshots.forEach(snap => {
+        const dateLabel = _fmtSnapDate(snap.date);
+
+        // 出荷情報（この日に終わるタスク）
+        let bulletHtml = '';
+        const seenTasks = new Set();
+        snap.endingLocs.forEach(loc => {
+            if (!loc.task || seenTasks.has(loc.task.id)) return;
+            seenTasks.add(loc.task.id);
+            const actualEnd = new Date(loc.task.end_date.getTime() - 86400000);
+            const ds = `${actualEnd.getMonth() + 1}/${actualEnd.getDate()}`;
+            bulletHtml += `<div>・${loc.task.project_number || ''}(${loc.task.machine || ''})出荷${ds}</div>`;
+        });
+
+        // グリッド列ヘッダー行
+        let hdrHtml = '<div style="display:flex;">';
+        COL_DEFS.forEach((c, ci) => {
+            const br = ci < COL_DEFS.length - 1 ? '1px solid #888' : 'none';
+            hdrHtml += `<div style="width:${c.w}px;min-width:${c.w}px;height:${COL_HDR_H}px;background:${c.bg};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:${c.fc};border-right:${br};flex-shrink:0;">${c.label}</div>`;
+        });
+        hdrHtml += '</div>';
+
+        // グリッド本体
+        let bodyHtml = '<div style="display:flex;">';
+
+        // 行番号列
+        let numCol = `<div style="display:flex;flex-direction:column;width:${ROW_NUM_W}px;flex-shrink:0;border-right:1px solid #888;">`;
+        for (let area = 0; area < AREA_COUNT; area++) {
+            const bb = area < AREA_COUNT - 1 ? '1px solid #ccc' : 'none';
+            numCol += `<div style="height:${AREA_H}px;border-bottom:${bb};display:flex;align-items:center;justify-content:center;font-size:12px;color:#e53935;font-weight:bold;">${area}</div>`;
+        }
+        numCol += '</div>';
+        bodyHtml += numCol;
+
+        // E3 列
+        let e3Col = `<div style="display:flex;flex-direction:column;width:${E3_W}px;flex-shrink:0;border-right:1px solid #888;">`;
+        for (let area = 0; area < AREA_COUNT; area++) {
+            e3Col += _fpCell(snap.activeLocs, 'E3', area, AREA_H, E3_W);
+        }
+        e3Col += '</div>';
+        bodyHtml += e3Col;
+
+        // E2 通路列
+        let e2Col = `<div style="display:flex;flex-direction:column;width:${E2_W}px;flex-shrink:0;border-right:1px solid #888;background:#e0e0e0;">`;
+        for (let area = 0; area < AREA_COUNT; area++) {
+            const bb = area < AREA_COUNT - 1 ? '1px solid #bbb' : 'none';
+            e2Col += `<div style="height:${AREA_H}px;border-bottom:${bb};"></div>`;
+        }
+        e2Col += '</div>';
+        bodyHtml += e2Col;
+
+        // E1 列
+        let e1Col = `<div style="display:flex;flex-direction:column;width:${E1_W}px;flex-shrink:0;">`;
+        for (let area = 0; area < AREA_COUNT; area++) {
+            e1Col += _fpCell(snap.activeLocs, 'E1', area, AREA_H, E1_W);
+        }
+        e1Col += '</div>';
+        bodyHtml += e1Col;
+
+        bodyHtml += '</div>';
+
+        // スナップショット全体
+        html += `
+            <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;">
+                <div style="font-size:13px;font-weight:bold;color:#333;font-family:メイリオ,sans-serif;margin-bottom:3px;">E棟</div>
+                <div style="display:flex;align-items:center;margin-bottom:4px;">
+                    <div style="border:1px solid #888;padding:2px 10px;font-size:13px;font-family:メイリオ,sans-serif;background:#fff;text-align:center;">${dateLabel}</div>
+                    <span style="font-size:13px;margin-left:4px;">〜</span>
+                </div>
+                <div style="min-height:36px;font-size:12px;font-family:メイリオ,sans-serif;color:#333;line-height:1.7;margin-bottom:4px;width:${ROW_NUM_W + E3_W + E2_W + E1_W}px;">${bulletHtml}</div>
+                <div style="border:2px solid #888;display:inline-flex;flex-direction:column;background:#fff;">
+                    ${hdrHtml}
+                    ${bodyHtml}
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// 1セルのHTMLを生成
+function _fpCell(activeLocs, group, area, cellH, colW) {
+    const bb = area < 7 ? '1px solid #ccc' : 'none';
+    const tasks = activeLocs.filter(l => l.area_group === group && Number(l.area_number) === area);
+    let boxes = '';
+    tasks.forEach(l => {
+        const t = l.task;
+        boxes += `<div title="${t.project_number || ''} ${t.machine || ''} ${t.text || ''}"
+            style="background:#1565c0;color:#fff;border-radius:3px;padding:3px 4px;font-size:11px;font-family:メイリオ,sans-serif;text-align:center;line-height:1.3;max-width:${colW - 10}px;word-break:break-all;flex-shrink:0;">
+            ${t.project_number || ''}<br>${t.machine || ''}
+        </div>`;
+    });
+    return `<div style="height:${cellH}px;border-bottom:${bb};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:3px;box-sizing:border-box;overflow:hidden;">${boxes}</div>`;
+}
+
+function _fmtSnapDate(date) {
+    return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+}
+
 // 実行
 initialize();
