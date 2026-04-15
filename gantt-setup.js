@@ -1002,6 +1002,16 @@ gantt.attachEvent("onBeforeTaskDisplay", function(id, task) {
         }
     }
 
+    // タスク名フィルタ（複数選択対応）
+    if (currentTaskNameFilter.length > 0) {
+        const taskText = String(task.text || '').trim();
+        const matches = currentTaskNameFilter.some(f => {
+            if (f === '出荷') return taskText === '出荷準備' || taskText === '工場出荷';
+            return taskText === f;
+        });
+        if (!matches) return false;
+    }
+
     // 担当者フィルタ（複数選択対応）
     if (currentOwnerFilter.length > 0) {
         const taskOwners = String(task.owner || '').split(/[,、\s]+/).map(o => o.trim());
