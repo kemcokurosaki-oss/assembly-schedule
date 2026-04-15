@@ -64,11 +64,13 @@ async function _loadArchiveDetailTable() {
     tableDiv.innerHTML = '<div style="padding:20px;text-align:center;color:#888;">読み込み中...</div>';
 
     // 組立工程表のタスクは is_detailed=false（設計工程表の is_detailed=true とは別）
+    // major_item が「組立」または「電装」のタスクのみ対象
     let query = supabaseClient
         .from('tasks')
         .select('*')
         .eq('project_number', _archiveDetailProjectNumber)
         .neq('is_detailed', true)
+        .or('major_item.eq.組立,major_item.eq.電装')
         .order('sort_order', { ascending: true });
 
     // assembly は task_type=null または 'assembly' も含む
