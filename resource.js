@@ -631,15 +631,18 @@ function toggleResourceView() {
         document.getElementById('resource_back_btn').style.display = 'none';
     }
 
-    setTimeout(() => {
-        gantt.setSizes();
-        const currentLevel = document.querySelector('.zoom-btn.active')?.textContent === '週単位' ? 'week' : 'day';
-        gantt.ext.zoom.setLevel(currentLevel);
-        // スクロールを微小に動かしてタイムラインを強制再描画
-        const s = gantt.getScrollState();
-        gantt.scrollTo(s.x + 1, s.y);
-        requestAnimationFrame(() => gantt.scrollTo(s.x, s.y));
-    }, 50);
+    // 組立場所モード中はガントのリサイズ不要
+    if (typeof isLocationMode === 'undefined' || !isLocationMode) {
+        setTimeout(() => {
+            gantt.setSizes();
+            const currentLevel = document.querySelector('.zoom-btn.active')?.textContent === '週単位' ? 'week' : 'day';
+            gantt.ext.zoom.setLevel(currentLevel);
+            // スクロールを微小に動かしてタイムラインを強制再描画
+            const s = gantt.getScrollState();
+            gantt.scrollTo(s.x + 1, s.y);
+            requestAnimationFrame(() => gantt.scrollTo(s.x, s.y));
+        }, 50);
+    }
 }
 
 // 今日の赤線：.gantt_task（ビューポート全高）に配置し、
