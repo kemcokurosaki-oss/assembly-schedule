@@ -2089,6 +2089,13 @@ function enterLocationMode() {
     const zoomRow = document.getElementById('zoom_row');
     if (zoomRow) zoomRow.style.display = 'none';
 
+    // 工事番号・タスク名フィルター、新規追加ボタンを非表示
+    const hideIds = ['project_filter_wrap', 'task_name_filter_wrap', 'create_task_btn', 'multi_delete_btn'];
+    hideIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+
     // フロアプランを表示
     document.getElementById('location_floorplan').style.display = 'block';
 
@@ -2105,6 +2112,18 @@ function exitLocationMode() {
     const zoomRow = document.getElementById('zoom_row');
     if (zoomRow) zoomRow.style.display = '';
     document.getElementById('gantt_here').style.display = '';
+
+    // 工事番号・タスク名フィルターを再表示（新規追加ボタンはエディター権限チェックに任せる）
+    const showIds = ['project_filter_wrap', 'task_name_filter_wrap'];
+    showIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = '';
+    });
+    // 新規追加ボタン・選択削除ボタンはエディター権限に従って表示
+    const addBtn = document.getElementById('create_task_btn');
+    if (addBtn) addBtn.style.display = _isEditor ? '' : 'none';
+    const delBtn = document.getElementById('multi_delete_btn');
+    if (delBtn) delBtn.style.display = 'none'; // 選択がなければ常に非表示
 
     // リソース底面パネルが開いていれば閉じる
     if (isResourceView && !isResourceFullscreen) {
