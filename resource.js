@@ -844,6 +844,108 @@ gantt.attachEvent("onGanttScroll", function (left, top){
     }
 });
 
+// ==========================================
+// 組立場所別リソースタイムライン
+// ==========================================
+
+function renderLocationResourceTimeline() {
+    const container = document.getElementById("resource_content_inner");
+    if (!container) return;
+    container.innerHTML = "";
+
+    // 表示行: E1-0〜E1-7、E3-0〜E3-7（E2は通路なので除外）
+    const LOCATION_ROWS = [];
+    ['E1', 'E3'].forEach(group => {
+        for (let area = 0; area <= 7; area++) {
+            LOCATION_ROWS.push({ group, area, label: `${group}-${area}` });
+        }
+    });
+
+    const locData = (typeof taskLocationsData !== 'undefined') ? taskLocationsData : [];
+
+    const scale = gantt.getScale();
+    const timelineWidth = scale.full_width;
+    const columnWidth = scale.col_width;
+    const actualGridWidth = isResourceFullscreen ? RESOURCE_OVERVIEW_COL_WIDTH : (_getRenderedGanttGridWidth());
+    const totalWidth = actualGridWidth + timelineWidth;
+    const firstPos = gantt.posFromDate(scale.trace_x[0]);
+
+    const gridBackground = `repeating-linear-gradient(to right, transparent, transparent ${columnWidth - 1}px, #ebebeb ${columnWidth - 1}px, #ebebeb ${columnWidth}px), repeating-linear-gradient(to bottom, transparent, transparent 29px, #ebebeb 29px, #ebebeb 30px)`;
+
+    let weekendBgHtml = "";
+    if (gantt.getState().scale_unit === "day") {
+        scale.trace_x.forEach((date, i) => {
+            if (date.getDay() === 0 || date.getDay() === 6 || _isHoliday(date)) {
+                weekendBgHtml += `<div style="position:absolute;top:0;bottom:0;left:${i * columnWidth}px;width:${columnWidth}px;background:#f4f4f4;z-index:0;"></div>`;
+            }
+        });
+    }
+
+    const bgStyle = `background-image:${gridBackground};background-position:${-firstPos}px 0;background-size:${columnWidth}px 30px;height:100%;`;
+    const todayPos = gantt.posFromDate(new Date());
+    const todayLineHtml = `<div class="resource-today-line" style="left:${todayPos}px;"></div>`;
+
+    let html = `<div style="width:${totalWidth}px;">`;
+
+    LOCATION_ROWS.forEach((row, rowIndex) => {
+        // E3-0 の手前に区切り線
+        const isGroupStart = row.area === 0 && rowIndex > 0;
+        const borderTop = isGroupStart ? 'border-top:2px solid #aaa;' : '';
+
+        // この場所に割り当てられたタスク
+        const rowTasks = locData.filter(loc =>
+            loc.area_group === row.group &&
+            Number(loc.area_number) === row.area &&
+            loc.task
+        );
+
+        html += `
+            <div class="resource-item" style="display:flex;${borderTop}border-bottom:1px solid #eee;min-height:30px;height:30px;align-items:stretch;width:${totalWidth}px;">
+                <div class="resource-grid-container" style="width:${actualGridWidth}px;min-width:${actualGridWidth}px;flex-shrink:0;display:flex;align-items:center;border-right:1px solid #ddd;background:${row.area === 0 ? '#efefef' : '#f9f9f9'};position:sticky;left:0;z-index:5;padding:0 8px;box-sizing:border-box;">
+                    <span style="font-size:11px;font-weight:bold;color:#333;font-family:メイリオ,sans-serif;">${row.label}</span>
+                </div>
+                <div class="resource-timeline" style="width:${timelineWidth}px;flex-shrink:0;position:relative;background:#fff;">
+                    <div style="position:absolute;top:0;left:0;right:0;bottom:0;z-index:0;">${weekendBgHtml}</div>
+                    <div style="position:absolute;top:0;left:0;right:0;bottom:0;${bgStyle}z-index:1;"></div>
+                    ${todayLineHtml}
+                    <div style="position:absolute;top:0;left:0;right:0;bottom:0;z-index:2;">
+        `;
+
+        rowTasks.forEach(loc => {
+            const t = loc.task;
+            const left  = gantt.posFromDate(t.start_date);
+            const right = gantt.posFromDate(t.end_date);
+            const width = Math.max(2, right - left);
+            html += `
+                <div class="resource-cell-bar"
+                     style="position:absolute;top:4px;height:22px;left:${left}px;width:${width}px;z-index:10;background:#1565c0;border-radius:2px;"
+                     title="${t.project_number || ''} ${t.machine || ''} ${t.text || ''}">
+                     <span class="resource-bar-text" style="color:#fff;font-size:11px;font-weight:bold;">${t.project_number || ''} ${t.machine || ''}</span>
+                </div>
+            `;
+        });
+
+        html += `
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
+    renderResourceCalendarHeader();
+
+    // 今日の位置へスクロール
+    setTimeout(() => {
+        const todayX = gantt.posFromDate(new Date());
+        const scrollX = Math.max(0, todayX - 200);
+        const rc = document.querySelector('.resource-content');
+        if (rc) rc.scrollLeft = scrollX;
+        _syncCalendarHeaderScroll(scrollX);
+    }, 0);
+}
+
 window.addEventListener('DOMContentLoaded', () => {
     const resourceContent = document.querySelector(".resource-content");
     if (resourceContent) {
