@@ -48,6 +48,12 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
     /* height: 100% を削除して flexbox に任せる */
     min-height: 0;
 }
+/* タイムラインの横スクロール時にGPUコンポジットレイヤーを使用してスムーズにする */
+#gantt_here .gantt_task,
+#gantt_here .gantt_data_area,
+#gantt_here .gantt_task_scale {
+    will-change: transform;
+}
 
 /* 独立したリソースパネル */
 #resource_panel {
