@@ -670,7 +670,20 @@ function _applyGanttScaleWeekendClasses() {
 gantt.attachEvent("onGanttRender", _drawMainTodayLine);
 gantt.attachEvent("onGanttRender", _applyGanttScaleWeekendClasses);
 gantt.attachEvent("onGanttRender", function() { requestAnimationFrame(_renderWishDateMarks); });
-gantt.attachEvent("onGanttScroll",  function() { _renderWishDateMarks(); });
+// ▼マークは dataArea 内の position:absolute なので横スクロールでは自動追随する。
+// 縦スクロール時のみ再描画が必要なため、scrollLeft が変わった場合はスキップする。
+let _wishMarkScrollX = undefined;
+let _wishMarkRafId = null;
+gantt.attachEvent("onGanttScroll", function(left) {
+    const isHScroll = (left !== _wishMarkScrollX);
+    _wishMarkScrollX = left;
+    if (isHScroll) return;
+    if (_wishMarkRafId) cancelAnimationFrame(_wishMarkRafId);
+    _wishMarkRafId = requestAnimationFrame(function() {
+        _wishMarkRafId = null;
+        _renderWishDateMarks();
+    });
+});
 
 function _toDateStr(d) {
     return d.getFullYear() + '-' +
