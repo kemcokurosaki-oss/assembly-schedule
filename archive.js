@@ -2,7 +2,6 @@
 // アーカイブ = 全体工程表の completed_projects テーブルに登録された完了済み工事番号
 // 組立工程表からアーカイブへの手動移動は行わない（全体工程表で管理）
 
-let _archiveCopySrc = null;
 let _archiveDetailProjectNumber = null;
 let _archiveDetailTaskType = 'assembly';
 
