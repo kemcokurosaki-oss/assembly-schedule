@@ -2333,5 +2333,34 @@ function _fmtSnapDate(date) {
     return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
 }
 
+// フロアプランのドロップ処理（エリア移動）
+async function handleLocationDrop(toGroup, toArea, cellEl) {
+    if (!_isEditor) return;
+    if (!_fpDragData) return;
+
+    const { task_id, from_group, from_area } = _fpDragData;
+    _fpDragData = null;
+
+    // 同じセルへのドロップは無視
+    if (from_group === toGroup && String(from_area) === String(toArea)) return;
+
+    // 対象レコードのみ更新（task_id + from_group + from_area で特定）
+    const { error } = await supabaseClient
+        .from('task_locations')
+        .update({ area_group: toGroup, area_number: String(toArea) })
+        .eq('task_id', task_id)
+        .eq('area_group', from_group)
+        .eq('area_number', String(from_area));
+
+    if (error) {
+        console.error('場所更新エラー:', error);
+        alert('場所の更新に失敗しました。');
+        return;
+    }
+
+    // データ再読み込み → isLocationMode=true なので loadData 内で renderLocationFloorPlan() が呼ばれる
+    await loadData();
+}
+
 // 実行
 initialize();
