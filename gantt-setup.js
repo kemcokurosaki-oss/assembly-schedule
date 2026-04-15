@@ -1172,6 +1172,7 @@ function _isHoliday(date) {
     return HOLIDAYS.has(key);
 }
 let currentOwnerFilter = [];      // 空配列 = 全担当者
+let currentTaskNameFilter = [];   // 空配列 = 全タスク名
 let _clearingEndDateId = null;   // 完了予定日クリア中のタスクID
 let isResourceFullscreen = false;
 
