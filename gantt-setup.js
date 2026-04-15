@@ -1261,6 +1261,40 @@ function _updateOwnerFilterBtn() {
     }
 }
 
+function toggleTaskNameFilterDropdown() {
+    const dd = document.getElementById('task_name_filter_dropdown');
+    if (dd) dd.style.display = dd.style.display === 'none' ? '' : 'none';
+}
+
+function taskNameFilterAllChanged(checkbox) {
+    document.querySelectorAll('.task-name-chk-item').forEach(chk => { chk.checked = false; });
+    currentTaskNameFilter = [];
+    gantt.render();
+    _updateTaskNameFilterBtn();
+}
+
+function taskNameFilterItemChanged() {
+    const selected = [];
+    document.querySelectorAll('.task-name-chk-item:checked').forEach(chk => selected.push(chk.value));
+    currentTaskNameFilter = selected;
+    const allChk = document.getElementById('task_name_chk_all');
+    if (allChk) allChk.checked = selected.length === 0;
+    gantt.render();
+    _updateTaskNameFilterBtn();
+}
+
+function _updateTaskNameFilterBtn() {
+    const btn = document.getElementById('task_name_filter_btn');
+    if (!btn) return;
+    if (currentTaskNameFilter.length === 0) {
+        btn.textContent = 'タスク名: 全表示';
+    } else if (currentTaskNameFilter.length === 1) {
+        btn.textContent = currentTaskNameFilter[0];
+    } else {
+        btn.textContent = currentTaskNameFilter[0] + ' 他' + (currentTaskNameFilter.length - 1) + '件';
+    }
+}
+
 // ドロップダウン外クリックで閉じる
 document.addEventListener('click', function(e) {
     const ownerWrap = document.getElementById('owner_filter_wrap');
@@ -1271,6 +1305,11 @@ document.addEventListener('click', function(e) {
     const projectWrap = document.getElementById('project_filter_wrap');
     if (projectWrap && !projectWrap.contains(e.target)) {
         const dd = document.getElementById('project_filter_dropdown');
+        if (dd) dd.style.display = 'none';
+    }
+    const taskNameWrap = document.getElementById('task_name_filter_wrap');
+    if (taskNameWrap && !taskNameWrap.contains(e.target)) {
+        const dd = document.getElementById('task_name_filter_dropdown');
         if (dd) dd.style.display = 'none';
     }
     const archiveBtnWrap = document.getElementById('archive_btn_wrap');
