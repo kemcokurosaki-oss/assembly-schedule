@@ -1114,13 +1114,18 @@ async function loadData() {
         return sa - sb;
     });
 
+    // 全体工程表で完了済みになった工事番号のタスクを除外
+    const activeTasks = parsedTasks.filter(t =>
+        !completedProjectNums.has(String(t.project_number || '').trim())
+    );
+
     // データ更新時は選択をリセット
     _gridSelection.clear();
     _lastGridClickId = null;
 
     gantt.clearAll();
     gantt.parse({
-        data: parsedTasks
+        data: activeTasks
     });
 
     // 追加：データ読み込み完了直後にリソースデータを更新
