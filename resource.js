@@ -806,21 +806,25 @@ function _renderWishDateMarks() {
 }
 
 // スクロール同期のイベント登録
+// _ganttScrolling フラグでガント→リソース同期中の循環スクロールを防ぐ
+let _ganttScrolling = false;
 let _todayLineRafId = null;
 gantt.attachEvent("onGanttScroll", function (left, top){
-    // スクロール位置の同期は遅延なく即座に実行（ラグ防止）
-    if (!isResourceFullscreen) {
-        // ガント表示中のみリソースパネルと同期（全画面モード中は干渉しない）
-        const resourceContent = document.querySelector(".resource-content");
-        if (resourceContent) resourceContent.scrollLeft = left;
-        _syncCalendarHeaderScroll(left);
-    }
     // 赤線の再描画はrAFでスロットリング（フレームあたり最大1回）
     if (_todayLineRafId) cancelAnimationFrame(_todayLineRafId);
     _todayLineRafId = requestAnimationFrame(function() {
         _todayLineRafId = null;
         _drawMainTodayLine();
     });
+    if (!isResourceFullscreen) {
+        // ガント表示中のみリソースパネルと同期（全画面モード中は干渉しない）
+        // フラグを立ててリソース側のscrollイベントがgantt.scrollToを呼ばないようにする
+        _ganttScrolling = true;
+        const resourceContent = document.querySelector(".resource-content");
+        if (resourceContent) resourceContent.scrollLeft = left;
+        _syncCalendarHeaderScroll(left);
+        _ganttScrolling = false;
+    }
 });
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -829,6 +833,8 @@ window.addEventListener('DOMContentLoaded', () => {
         resourceContent.addEventListener('scroll', function() {
             // カレンダーヘッダーは常に同期
             _syncCalendarHeaderScroll(this.scrollLeft);
+            // ガント→リソース同期中は逆方向の同期をスキップ（循環スクロール防止）
+            if (_ganttScrolling) return;
             // ガント表示中のみガントと同期（全画面モード中は非表示のガントに触らない）
             if (!isResourceFullscreen) {
                 const ganttScroll = gantt.getScrollState();
