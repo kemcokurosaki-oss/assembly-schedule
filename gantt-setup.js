@@ -1437,8 +1437,23 @@ function setTaskTypeFilter(type) {
 }
 
 function toggleDrawingFilter()  { setTaskTypeFilter('assembly'); }
-function toggleLongtermFilter() { setTaskTypeFilter('long_lead_item'); }
 function toggleTripFilter()     { setTaskTypeFilter('business_trip'); }
+
+function toggleLongtermFilter() {
+    if (currentTaskTypeFilter === 'long_lead_item') {
+        // 解除 → 組立モードへ戻る
+        currentTaskTypeFilter = 'assembly';
+        exitLocationMode();
+        updateFilterButtons();
+        switchColumns('assembly');
+    } else {
+        // 担当別全画面モード中なら先に解除
+        if (isResourceFullscreen) _exitResourceFullscreen();
+        currentTaskTypeFilter = 'long_lead_item';
+        updateFilterButtons();
+        enterLocationMode();
+    }
+}
 
 // 工事番号セレクトボックスの表示更新
 function updateDisplay() {
