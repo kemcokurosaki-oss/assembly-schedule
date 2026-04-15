@@ -1863,7 +1863,8 @@ async function initialize() {
         }
     });
 
-    // 2. 休日データを読み込む
+    // 2. 完了済み工事番号（全体工程表連動）と休日データを読み込む
+    await loadCompletedProjects();
     await loadHolidays();
 
     // 3. セレクトボックスを構築（パラメータがあれば selected になる）
