@@ -2314,12 +2314,19 @@ function _fpCell(activeLocs, group, area, cellH, colW) {
     let boxes = '';
     tasks.forEach(l => {
         const t = l.task;
-        boxes += `<div title="${t.project_number || ''} ${t.machine || ''} ${t.text || ''}"
-            style="background:#1565c0;color:#fff;border-radius:3px;padding:3px 4px;font-size:11px;font-family:メイリオ,sans-serif;text-align:center;line-height:1.3;max-width:${colW - 10}px;word-break:break-all;flex-shrink:0;">
+        // エディターのみドラッグ可能
+        const dragAttrs = _isEditor
+            ? `draggable="true" ondragstart="_fpDragData={task_id:${l.task_id},from_group:'${group}',from_area:${area}};event.dataTransfer.effectAllowed='move';" style="background:#1565c0;color:#fff;border-radius:3px;padding:3px 4px;font-size:11px;font-family:メイリオ,sans-serif;text-align:center;line-height:1.3;max-width:${colW - 10}px;word-break:break-all;flex-shrink:0;cursor:grab;"`
+            : `style="background:#1565c0;color:#fff;border-radius:3px;padding:3px 4px;font-size:11px;font-family:メイリオ,sans-serif;text-align:center;line-height:1.3;max-width:${colW - 10}px;word-break:break-all;flex-shrink:0;"`;
+        boxes += `<div ${dragAttrs} title="${t.project_number || ''} ${t.machine || ''} ${t.text || ''}">
             ${t.project_number || ''}<br>${t.machine || ''}
         </div>`;
     });
-    return `<div style="height:${cellH}px;border-bottom:${bb};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:3px;box-sizing:border-box;overflow:hidden;">${boxes}</div>`;
+    // エディターのみドロップ受け付け
+    const dropAttrs = _isEditor
+        ? `ondragover="event.preventDefault();this.style.background='#e3f2fd';" ondragleave="this.style.background='';" ondrop="handleLocationDrop('${group}',${area},this);this.style.background='';"`
+        : '';
+    return `<div ${dropAttrs} style="height:${cellH}px;border-bottom:${bb};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:3px;box-sizing:border-box;overflow:hidden;">${boxes}</div>`;
 }
 
 function _fmtSnapDate(date) {
