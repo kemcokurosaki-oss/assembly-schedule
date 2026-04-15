@@ -1147,10 +1147,26 @@ async function loadData() {
         data: activeTasks
     });
 
+    // task_locations データを構築
+    const locData = locationsResult.data;
+    if (locData) {
+        const taskMap = new Map(activeTasks.map(t => [t.id, t]));
+        taskLocationsData = locData
+            .map(loc => ({ ...loc, task: taskMap.get(loc.task_id) || null }))
+            .filter(loc => loc.task !== null);
+    } else {
+        taskLocationsData = [];
+    }
+
     // 追加：データ読み込み完了直後にリソースデータを更新
     if (isResourceView) {
         updateResourceData();
         gantt.render();
+    }
+
+    // 組立場所モード中はフロアプランを再描画
+    if (isLocationMode) {
+        renderLocationFloorPlan();
     }
 }
 
