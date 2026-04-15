@@ -58,11 +58,7 @@
                 <button class="btn btn-primary" id="create_task_btn" onclick="createTask()" style="display:none;">+ 新規タスク追加</button>
                 <button class="btn" id="multi_delete_btn" onclick="deleteSelectedTasks()" style="display:none;">選択削除 (<span id="multi_delete_count">0</span>件)</button>
                 <div style="margin-left:auto; position:relative; display:none;" id="archive_btn_wrap">
-                    <button class="btn" onclick="toggleArchiveMenu(event)">アーカイブ ▼</button>
-                    <div id="archive_dropdown_menu">
-                        <div onclick="openArchiveManager()">アーカイブ管理</div>
-                        <div onclick="openArchiveList()">アーカイブ一覧</div>
-                    </div>
+                    <button class="btn" onclick="openArchiveList()">完了工事一覧</button>
                 </div>
             </div>
         </div>
