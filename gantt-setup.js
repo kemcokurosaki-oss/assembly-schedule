@@ -1381,29 +1381,25 @@ function _colSetName(filterType) {
 
 function setTaskTypeFilter(type) {
     const prevColSet = _colSetName(currentTaskTypeFilter);
-    currentTaskTypeFilter = (currentTaskTypeFilter === type) ? null : type;
+    // 同じフィルターを再クリックしても null にせず assembly にフォールバック
+    currentTaskTypeFilter = (currentTaskTypeFilter === type) ? 'assembly' : type;
     updateFilterButtons();
 
-    if (currentTaskTypeFilter === null) {
-        // フィルター全オフ → リソース全画面に戻す
-        _enterResourceFullscreen();
-    } else {
-        // フィルターON → ガントビューに切り替え
-        if (isResourceFullscreen) {
-            _exitResourceFullscreen();
-        }
-        if (_colSetName(currentTaskTypeFilter) !== prevColSet) {
-            switchColumns(currentTaskTypeFilter);
-        } else {
-            gantt.refreshData();
-        }
-        // ブラウザの描画確定後にズームレベルを再設定してカレンダーヘッダーを完全再描画
-        setTimeout(() => {
-            gantt.setSizes();
-            const currentLevel = document.querySelector('.zoom-btn.active')?.textContent === '週単位' ? 'week' : 'day';
-            gantt.ext.zoom.setLevel(currentLevel);
-        }, 0);
+    // フィルターON → ガントビューに切り替え
+    if (isResourceFullscreen) {
+        _exitResourceFullscreen();
     }
+    if (_colSetName(currentTaskTypeFilter) !== prevColSet) {
+        switchColumns(currentTaskTypeFilter);
+    } else {
+        gantt.refreshData();
+    }
+    // ブラウザの描画確定後にズームレベルを再設定してカレンダーヘッダーを完全再描画
+    setTimeout(() => {
+        gantt.setSizes();
+        const currentLevel = document.querySelector('.zoom-btn.active')?.textContent === '週単位' ? 'week' : 'day';
+        gantt.ext.zoom.setLevel(currentLevel);
+    }, 0);
 }
 
 function toggleDrawingFilter()  { setTaskTypeFilter('assembly'); }
