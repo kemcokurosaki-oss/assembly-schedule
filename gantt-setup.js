@@ -212,7 +212,7 @@ function _completionDateClear(taskId) {
 }
 gantt.config.auto_scheduling = true; // 自動スケジューリングを有効化
 gantt.config.start_date = new Date(2025, 0, 1);  // 2025年1月1日
-gantt.config.end_date = new Date(2027, 0, 1);    // 2026年12月31日まで含める
+gantt.config.end_date = new Date(2028, 0, 1);    // 2027年12月31日まで含める
 gantt.config.fit_tasks = false; // 自動調整を無効化
 // スクロール中のDOM更新を無効化してスムーズな横スクロールを実現
 // タスク数が少ない（数百行以内）ため全行常時レンダリングしても問題ない
