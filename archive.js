@@ -55,7 +55,7 @@ function switchArchiveDetailTab(taskType) {
 
 async function _loadArchiveDetailTable() {
     const typeFilter = _archiveDetailTaskType;
-    ['assembly', 'long_lead_item', 'business_trip'].forEach(t => {
+    ['assembly', 'business_trip'].forEach(t => {
         const btn = document.getElementById('dtab_' + t);
         if (btn) btn.classList.toggle('active', t === typeFilter);
     });
@@ -63,11 +63,12 @@ async function _loadArchiveDetailTable() {
     const tableDiv = document.getElementById('archive_detail_table');
     tableDiv.innerHTML = '<div style="padding:20px;text-align:center;color:#888;">読み込み中...</div>';
 
+    // 組立工程表のタスクは is_detailed=false（設計工程表の is_detailed=true とは別）
     let query = supabaseClient
         .from('tasks')
         .select('*')
         .eq('project_number', _archiveDetailProjectNumber)
-        .eq('is_detailed', true)
+        .neq('is_detailed', true)
         .order('sort_order', { ascending: true });
 
     // assembly は task_type=null または 'assembly' も含む
