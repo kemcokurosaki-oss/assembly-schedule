@@ -1135,6 +1135,9 @@ let projectMap = new Map();
 let currentTaskTypeFilter = null; // null = 全表示
 let currentProjectFilter = [];    // 空配列 = 全工事番号
 
+// 全体工程表の completed_projects テーブルから取得した完了済み工事番号
+let completedProjectNums = new Set();
+
 // 休日セット（"YYYY-MM-DD" 形式で保持）
 let HOLIDAYS = new Set();
 
