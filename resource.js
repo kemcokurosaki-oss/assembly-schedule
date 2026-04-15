@@ -602,6 +602,11 @@ function _exitResourceFullscreen() {
     btn.style.display = ""; // リソースボタンを復元
     btn.innerText = "リソース表示";
     document.getElementById("resource_close_btn").style.display = "";
+    // 個別に設定された非表示状態をリセットしてから updateFilterButtons に任せる
+    ['project_filter_wrap', 'task_name_filter_wrap', 'create_task_btn'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = '';
+    });
     updateFilterButtons();
     setTimeout(() => {
         gantt.setSizes();
