@@ -863,11 +863,27 @@ function renderLocationResourceTimeline() {
 
     const locData = (typeof taskLocationsData !== 'undefined') ? taskLocationsData : [];
 
+    // ガントが非表示の場合、スケール取得のため一時的に可視化
+    const ganttEl = document.getElementById('gantt_here');
+    const ganttHidden = ganttEl && ganttEl.style.display === 'none';
+    if (ganttHidden) {
+        ganttEl.style.visibility = 'hidden';
+        ganttEl.style.display = '';
+        gantt.setSizes();
+    }
+
     const scale = gantt.getScale();
     const timelineWidth = scale.full_width;
     const columnWidth = scale.col_width;
-    const actualGridWidth = isResourceFullscreen ? RESOURCE_OVERVIEW_COL_WIDTH : (_getRenderedGanttGridWidth());
+    // 場所ラベル列は固定幅（ガント非表示時は _getRenderedGanttGridWidth が 0 を返すため）
+    const LOCATION_GRID_WIDTH = 80;
+    const actualGridWidth = isResourceFullscreen ? RESOURCE_OVERVIEW_COL_WIDTH : LOCATION_GRID_WIDTH;
     const totalWidth = actualGridWidth + timelineWidth;
+
+    if (ganttHidden) {
+        ganttEl.style.display = 'none';
+        ganttEl.style.visibility = '';
+    }
     const firstPos = gantt.posFromDate(scale.trace_x[0]);
 
     const gridBackground = `repeating-linear-gradient(to right, transparent, transparent ${columnWidth - 1}px, #ebebeb ${columnWidth - 1}px, #ebebeb ${columnWidth}px), repeating-linear-gradient(to bottom, transparent, transparent 29px, #ebebeb 29px, #ebebeb 30px)`;
