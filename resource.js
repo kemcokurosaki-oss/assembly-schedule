@@ -536,6 +536,14 @@ function _syncCalendarHeaderScroll(left) {
 
 // リソース全画面モードに入る（フィルターなし初期表示用）
 function _enterResourceFullscreen() {
+    // 組立場所モード中なら先に解除（フロアプランを隠してガントを復元）
+    if (typeof isLocationMode !== 'undefined' && isLocationMode) {
+        isLocationMode = false;
+        const fp = document.getElementById('location_floorplan');
+        if (fp) fp.style.display = 'none';
+        const zoomRow = document.getElementById('zoom_row');
+        if (zoomRow) zoomRow.style.display = '';
+    }
     isResourceFullscreen = true;
     isResourceView = true;
     // 担当者フィルターをリセット
