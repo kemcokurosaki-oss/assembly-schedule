@@ -1963,11 +1963,15 @@ async function initialize() {
                 gantt.ext.zoom.setLevel(currentLevel);
             }, 0);
         } else {
-            // 直接アクセス：全組立タスクをガントで表示（task_typeフィルターなし）
-            currentTaskTypeFilter = null;
+            // 直接アクセス：組立モードで起動
+            currentTaskTypeFilter = 'assembly';
             updateFilterButtons();
-            gantt.render();
-            gantt.showDate(new Date());
+            switchColumns('assembly');
+            setTimeout(() => {
+                gantt.setSizes();
+                const currentLevel = document.querySelector('.zoom-btn.active')?.textContent === '週単位' ? 'week' : 'day';
+                gantt.ext.zoom.setLevel(currentLevel);
+            }, 0);
         }
     });
 }
