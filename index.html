@@ -44,6 +44,21 @@
                         <div id="project_chk_list"></div>
                     </div>
                 </div>
+                <div id="task_name_filter_wrap" style="position:relative;">
+                    <button type="button" id="task_name_filter_btn" onclick="toggleTaskNameFilterDropdown()" class="header-select" style="white-space:nowrap; text-align:left;">タスク名: 全表示</button>
+                    <div id="task_name_filter_dropdown" style="display:none; position:absolute; top:calc(100% + 2px); left:0; background:#fff; border:1px solid #ccc; border-radius:3px; z-index:9999; padding:4px 0; min-width:130px; box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+                        <label style="display:block; padding:4px 10px; cursor:pointer; white-space:nowrap; font-size:13px; font-family:'メイリオ',Meiryo,sans-serif;">
+                            <input type="checkbox" id="task_name_chk_all" onchange="taskNameFilterAllChanged(this)" checked> 全表示
+                        </label>
+                        <div style="border-top:1px solid #eee; margin:2px 0;"></div>
+                        <div id="task_name_chk_list">
+                            <label style="display:block; padding:4px 10px; cursor:pointer; white-space:nowrap; font-size:13px; font-family:'メイリオ',Meiryo,sans-serif;"><input type="checkbox" class="task-name-chk-item" value="機械組立" onchange="taskNameFilterItemChanged()"> 機械組立</label>
+                            <label style="display:block; padding:4px 10px; cursor:pointer; white-space:nowrap; font-size:13px; font-family:'メイリオ',Meiryo,sans-serif;"><input type="checkbox" class="task-name-chk-item" value="盤組立" onchange="taskNameFilterItemChanged()"> 盤組立</label>
+                            <label style="display:block; padding:4px 10px; cursor:pointer; white-space:nowrap; font-size:13px; font-family:'メイリオ',Meiryo,sans-serif;"><input type="checkbox" class="task-name-chk-item" value="電気艤装" onchange="taskNameFilterItemChanged()"> 電気艤装</label>
+                            <label style="display:block; padding:4px 10px; cursor:pointer; white-space:nowrap; font-size:13px; font-family:'メイリオ',Meiryo,sans-serif;"><input type="checkbox" class="task-name-chk-item" value="出荷" onchange="taskNameFilterItemChanged()"> 出荷</label>
+                        </div>
+                    </div>
+                </div>
                 <div id="owner_filter_wrap" style="position:relative; display:none;">
                     <button type="button" id="owner_filter_btn" onclick="toggleOwnerFilterDropdown()" class="header-select" style="white-space:nowrap; text-align:left;">担当者: 全員</button>
                     <div id="owner_filter_dropdown" style="display:none; position:absolute; top:calc(100% + 2px); left:0; background:#fff; border:1px solid #ccc; border-radius:3px; z-index:9999; padding:4px 0; min-width:130px; box-shadow:0 2px 8px rgba(0,0,0,0.15);">
