@@ -98,11 +98,10 @@ async function _loadArchiveDetailTable() {
                 <col style="width:80px;">
                 <col style="width:80px;">
                 <col style="width:38px;">
-                <col style="width:50px;">
             </colgroup>
             <thead><tr>
                 <th>タスク名</th><th>機械</th><th>ユニット</th>
-                <th>担当</th><th>開始日</th><th>完了予定日</th><th>日数</th><th>状態</th>
+                <th>担当</th><th>開始日</th><th>完了予定日</th><th>日数</th>
             </tr></thead>
             <tbody>${data.map(t => `
                 <tr>
@@ -113,7 +112,6 @@ async function _loadArchiveDetailTable() {
                     <td>${t.start_date ? t.start_date.substring(0, 10) : ''}</td>
                     <td>${t.end_date ? t.end_date.substring(0, 10) : ''}</td>
                     <td>${t.duration != null ? t.duration : ''}</td>
-                    <td>${t.status || ''}</td>
                 </tr>`).join('')}
             </tbody></table>`;
     }
