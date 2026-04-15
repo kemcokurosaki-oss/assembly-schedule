@@ -1184,6 +1184,7 @@ let HOLIDAYS = new Set();
 // 組立場所フロアプランビュー用
 let taskLocationsData = []; // { task_id, area_group, area_number, task }
 let isLocationMode = false;
+let _fpDragData = null; // { task_id, from_group, from_area } ドラッグ中のデータ
 
 async function loadCompletedProjects() {
     const { data, error } = await supabaseClient
