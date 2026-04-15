@@ -92,7 +92,7 @@ async function _loadArchiveDetailTable() {
         tableDiv.innerHTML = `<table>
             <thead><tr>
                 <th>タスク名</th><th>機械</th><th>ユニット</th>
-                <th>担当</th><th>開始日</th><th>完了予定日</th><th>状態</th>
+                <th>担当</th><th>開始日</th><th>完了予定日</th><th>日数</th><th>状態</th>
             </tr></thead>
             <tbody>${data.map(t => `
                 <tr>
@@ -102,6 +102,7 @@ async function _loadArchiveDetailTable() {
                     <td>${t.owner || ''}</td>
                     <td>${t.start_date ? t.start_date.substring(0, 10) : ''}</td>
                     <td>${t.end_date ? t.end_date.substring(0, 10) : ''}</td>
+                    <td style="text-align:right;">${t.duration != null ? t.duration : ''}</td>
                     <td>${t.status || ''}</td>
                 </tr>`).join('')}
             </tbody></table>`;
