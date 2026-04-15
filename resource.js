@@ -951,15 +951,7 @@ function renderLocationResourceTimeline() {
     html += '</div>';
     container.innerHTML = html;
     renderResourceCalendarHeader();
-
-    // 今日の位置へスクロール
-    setTimeout(() => {
-        const todayX = gantt.posFromDate(new Date());
-        const scrollX = Math.max(0, todayX - 200);
-        const rc = document.querySelector('.resource-content');
-        if (rc) rc.scrollLeft = scrollX;
-        _syncCalendarHeaderScroll(scrollX);
-    }, 0);
+    syncResourceScroll();
 }
 
 window.addEventListener('DOMContentLoaded', () => {
