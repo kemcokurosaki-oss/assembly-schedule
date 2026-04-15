@@ -1141,6 +1141,14 @@ let completedProjectNums = new Set();
 // 休日セット（"YYYY-MM-DD" 形式で保持）
 let HOLIDAYS = new Set();
 
+async function loadCompletedProjects() {
+    const { data, error } = await supabaseClient
+        .from('completed_projects')
+        .select('project_number');
+    if (error) { console.error('completedProjects 読み込みエラー:', error); return; }
+    completedProjectNums = new Set((data || []).map(c => String(c.project_number).trim()));
+}
+
 async function loadHolidays() {
     const { data, error } = await supabaseClient.from('holidays').select('date');
     if (error) { console.error('休日読み込みエラー:', error); return; }
