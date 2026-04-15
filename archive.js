@@ -71,7 +71,10 @@ async function _loadArchiveDetailTable() {
         .eq('project_number', _archiveDetailProjectNumber)
         .neq('is_detailed', true)
         .or('major_item.eq.組立,major_item.eq.電装')
-        .order('sort_order', { ascending: true });
+        .order('machine', { ascending: true, nullsFirst: true })
+        .order('unit', { ascending: true, nullsFirst: true })
+        .order('start_date', { ascending: true, nullsFirst: true })
+        .order('sort_order', { ascending: true, nullsFirst: false });
 
     // assembly は task_type=null または 'assembly' も含む
     if (typeFilter === 'assembly') {
