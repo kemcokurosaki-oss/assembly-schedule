@@ -1366,7 +1366,12 @@ gantt.attachEvent('onAfterLightbox', function() {
 });
 
 function returnToResourceView() {
-    if (isResourceFullscreen) return; // すでに担当別表示中
+    if (isResourceFullscreen) {
+        // 担当別モード中に再クリック → 組立モードへ切り替え
+        currentTaskTypeFilter = null; // setTaskTypeFilter内で'assembly'に設定させる
+        setTaskTypeFilter('assembly');
+        return;
+    }
     currentTaskTypeFilter = null;
     updateFilterButtons();
     _enterResourceFullscreen();
