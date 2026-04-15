@@ -133,7 +133,7 @@ async function executeArchiveCopy() {
         .from('tasks')
         .select('*')
         .eq('project_number', _archiveCopySrc)
-        .eq('is_detailed', true);
+        .neq('is_detailed', true);
 
     if (typeFilter === 'assembly') {
         query = query.or('task_type.is.null,task_type.eq.assembly');
