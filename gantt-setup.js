@@ -1552,9 +1552,14 @@ async function initialize() {
             _gridSelection.clear();
             _gridSelection.add(taskId);
             _lastGridClickId = taskId;
-            const scrollY = gantt.getScrollState().y;
-            gantt.showTask(taskId);
-            gantt.scrollTo(null, scrollY);
+            const task = gantt.getTask(taskId);
+            if (task) {
+                const state = gantt.getScrollState();
+                const taskX = gantt.posFromDate(task.start_date);
+                // 1回のscrollToでX/Y両方を指定することで競合を防ぐ
+                // 左マージン40pxを取り、タスク開始日がビューポート左寄りに来るようにする
+                gantt.scrollTo(Math.max(0, taskX - 40), state.y);
+            }
         }
         _applyGridSelection();
         _updateMultiDeleteBtn();
