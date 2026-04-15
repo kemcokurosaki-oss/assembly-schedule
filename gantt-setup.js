@@ -1159,6 +1159,10 @@ let completedProjectNums = new Set();
 // 休日セット（"YYYY-MM-DD" 形式で保持）
 let HOLIDAYS = new Set();
 
+// 組立場所フロアプランビュー用
+let taskLocationsData = []; // { task_id, area_group, area_number, task }
+let isLocationMode = false;
+
 async function loadCompletedProjects() {
     const { data, error } = await supabaseClient
         .from('completed_projects')
