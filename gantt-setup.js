@@ -1051,16 +1051,22 @@ function _parseSupabaseDate(str) {
 
 // データ読み込み
 async function loadData() {
-    const { data, error } = await supabaseClient
-        .from('tasks')
-        .select('*')
-        .neq('is_archived', true)
-        .order('project_number', { ascending: true })
-        .order('machine', { ascending: true, nullsFirst: true })
-        .order('unit', { ascending: true, nullsFirst: true })
-        .order('start_date', { ascending: true, nullsFirst: true })
-        .order('id', { ascending: true });
+    const [tasksResult, locationsResult] = await Promise.all([
+        supabaseClient
+            .from('tasks')
+            .select('*')
+            .neq('is_archived', true)
+            .order('project_number', { ascending: true })
+            .order('machine', { ascending: true, nullsFirst: true })
+            .order('unit', { ascending: true, nullsFirst: true })
+            .order('start_date', { ascending: true, nullsFirst: true })
+            .order('id', { ascending: true }),
+        supabaseClient
+            .from('task_locations')
+            .select('task_id, area_group, area_number')
+    ]);
 
+    const { data, error } = tasksResult;
     if (error) {
         console.error("Supabase error:", error);
         return;
