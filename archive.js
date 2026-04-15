@@ -135,7 +135,8 @@ async function executeArchiveCopy() {
         .from('tasks')
         .select('*')
         .eq('project_number', _archiveCopySrc)
-        .neq('is_detailed', true);
+        .neq('is_detailed', true)
+        .or('major_item.eq.組立,major_item.eq.電装');
 
     if (typeFilter === 'assembly') {
         query = query.or('task_type.is.null,task_type.eq.assembly');
