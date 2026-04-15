@@ -1392,6 +1392,7 @@ async function initProjectSelect(projectParam) {
     projectMap = new Map();
     data.forEach(item => {
         if (!item.project_number) return;
+        if (completedProjectNums.has(String(item.project_number).trim())) return; // 全体工程表で完了済みを除外
         const isDetailed = (item.is_detailed === true || String(item.is_detailed).toUpperCase() === 'TRUE');
         if (isDetailed) return;
         const mi = String(item.major_item);
