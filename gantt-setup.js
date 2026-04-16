@@ -2177,7 +2177,7 @@ function _buildLocationSnapshots() {
 
     const sorted = Array.from(changeDates).sort((a, b) => a - b);
 
-    return sorted.map(dateMs => {
+    const rawSnapshots = sorted.map(dateMs => {
         const date = new Date(dateMs);
 
         // この日付でアクティブなタスク
@@ -2195,8 +2195,66 @@ function _buildLocationSnapshots() {
             return e.getTime() === dateMs;
         });
 
-        return { date, activeLocs, endingLocs, relevantLocs: relevant };
+        const layoutSignature = _buildLocationLayoutSignature(relevant, date);
+        return { date, activeLocs, endingLocs, relevantLocs: relevant, layoutSignature };
     });
+
+    // 「日付イベント」ではなく「セル配置の変化」があったタイミングのみ残す
+    const snapshots = [];
+    let prevSignature = null;
+    rawSnapshots.forEach((snap, index) => {
+        if (index === 0 || snap.layoutSignature !== prevSignature) {
+            snapshots.push(snap);
+            prevSignature = snap.layoutSignature;
+        }
+    });
+
+    return snapshots.map(({ layoutSignature, ...rest }) => rest);
+}
+
+// 1日分のセル配置を比較可能な文字列に変換
+function _buildLocationLayoutSignature(relevantLocs, date) {
+    const target = new Date(date.getTime());
+    target.setHours(0, 0, 0, 0);
+    const groups = ['E3', 'E1'];
+    const areaCount = 8;
+    const parts = [];
+
+    groups.forEach(group => {
+        for (let area = 0; area < areaCount; area++) {
+            const cellLocs = relevantLocs.filter(l => l.area_group === group && Number(l.area_number) === area);
+            const mergedMap = new Map();
+            cellLocs.forEach(l => {
+                const t = l.task || {};
+                const project = String(t.project_number || '').trim();
+                const machine = String(t.machine || '').trim();
+                const key = `${project}__${machine}`;
+                if (!mergedMap.has(key)) {
+                    mergedMap.set(key, { minStart: null, maxEnd: null });
+                }
+                const bucket = mergedMap.get(key);
+
+                const s = t.start_date ? new Date(t.start_date.getTime()) : null;
+                if (s) {
+                    s.setHours(0, 0, 0, 0);
+                    if (!bucket.minStart || s < bucket.minStart) bucket.minStart = s;
+                }
+
+                const e = t.end_date ? new Date(t.end_date.getTime() - 86400000) : null;
+                if (e) {
+                    e.setHours(0, 0, 0, 0);
+                    if (!bucket.maxEnd || e > bucket.maxEnd) bucket.maxEnd = e;
+                }
+            });
+
+            const visibleKeys = Array.from(mergedMap.entries())
+                .filter(([, b]) => b.minStart && b.maxEnd && b.minStart <= target && b.maxEnd >= target)
+                .map(([key]) => key)
+                .sort();
+            parts.push(`${group}:${area}:${visibleKeys.join('|')}`);
+        }
+    });
+    return parts.join('||');
 }
 
 // ---- フロアプラン描画 ----
