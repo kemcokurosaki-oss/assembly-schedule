@@ -1185,6 +1185,7 @@ let HOLIDAYS = new Set();
 let taskLocationsData = []; // { task_id, area_group, area_number, task }
 let isLocationMode = false;
 let _fpDragData = null; // { task_id, from_group, from_area } ドラッグ中のデータ
+let _fpDragEl = null;   // ドラッグ中の要素
 
 async function loadCompletedProjects() {
     const { data, error } = await supabaseClient
@@ -2320,7 +2321,7 @@ function _fpCell(activeLocs, group, area, cellH, colW) {
         const t = l.task;
         // エディターのみドラッグ可能
         const dragAttrs = _isEditor
-            ? `draggable="true" ondragstart="_fpDragData={task_id:${l.task_id},from_group:'${group}',from_area:${area}};event.dataTransfer.effectAllowed='move';" style="background:#1565c0;color:#fff;border-radius:3px;padding:3px 4px;font-size:11px;font-family:メイリオ,sans-serif;text-align:center;line-height:1.3;max-width:${colW - 10}px;word-break:break-all;flex-shrink:0;cursor:grab;"`
+            ? `draggable="true" ondragstart="handleLocationTaskDragStart(event,${l.task_id},'${group}',${area})" ondragend="handleLocationTaskDragEnd(event)" style="background:#1565c0;color:#fff;border-radius:3px;padding:3px 4px;font-size:11px;font-family:メイリオ,sans-serif;text-align:center;line-height:1.3;max-width:${colW - 10}px;word-break:break-all;flex-shrink:0;cursor:grab;"`
             : `style="background:#1565c0;color:#fff;border-radius:3px;padding:3px 4px;font-size:11px;font-family:メイリオ,sans-serif;text-align:center;line-height:1.3;max-width:${colW - 10}px;word-break:break-all;flex-shrink:0;"`;
         boxes += `<div ${dragAttrs} title="${t.project_number || ''} ${t.machine || ''} ${t.text || ''}">
             ${t.project_number || ''}<br>${t.machine || ''}
@@ -2328,7 +2329,7 @@ function _fpCell(activeLocs, group, area, cellH, colW) {
     });
     // エディターのみドロップ受け付け
     const dropAttrs = _isEditor
-        ? `ondragover="event.preventDefault();this.style.background='#e3f2fd';" ondragleave="this.style.background='';" ondrop="handleLocationDrop('${group}',${area},this);this.style.background='';"`
+        ? `ondragover="handleLocationCellDragOver(event,this)" ondragleave="handleLocationCellDragLeave(this)" ondrop="handleLocationDrop(event,'${group}',${area},this)"`
         : '';
     return `<div ${dropAttrs} style="height:${cellH}px;border-bottom:${bb};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:3px;box-sizing:border-box;overflow:hidden;">${boxes}</div>`;
 }
@@ -2338,12 +2339,53 @@ function _fmtSnapDate(date) {
 }
 
 // フロアプランのドロップ処理（エリア移動）
-async function handleLocationDrop(toGroup, toArea, cellEl) {
+function handleLocationTaskDragStart(e, taskId, fromGroup, fromArea) {
+    if (!_isEditor) return;
+    _fpDragData = { task_id: taskId, from_group: fromGroup, from_area: fromArea };
+    _fpDragEl = e && e.currentTarget ? e.currentTarget : null;
+    if (_fpDragEl) _fpDragEl.style.opacity = '0.6';
+    if (e && e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        // 一部ブラウザで drag 開始を有効化するため setData が必要
+        e.dataTransfer.setData('text/plain', String(taskId));
+    }
+}
+
+function handleLocationTaskDragEnd() {
+    if (_fpDragEl) _fpDragEl.style.opacity = '';
+    _fpDragEl = null;
+    _fpDragData = null;
+    _clearLocationDropHighlights();
+}
+
+function handleLocationCellDragOver(event, cellEl) {
+    event.preventDefault();
+    if (cellEl) cellEl.style.background = '#e3f2fd';
+}
+
+function handleLocationCellDragLeave(cellEl) {
+    if (cellEl) cellEl.style.background = '';
+}
+
+function _clearLocationDropHighlights() {
+    const fp = document.getElementById('location_floorplan');
+    if (!fp) return;
+    fp.querySelectorAll('[ondrop*="handleLocationDrop"]').forEach(el => {
+        el.style.background = '';
+    });
+}
+
+// フロアプランのドロップ処理（エリア移動）
+async function handleLocationDrop(event, toGroup, toArea, cellEl) {
+    if (event) event.preventDefault();
+    if (cellEl) cellEl.style.background = '';
     if (!_isEditor) return;
     if (!_fpDragData) return;
 
     const { task_id, from_group, from_area } = _fpDragData;
     _fpDragData = null;
+    if (_fpDragEl) _fpDragEl.style.opacity = '';
+    _fpDragEl = null;
 
     // 同じセルへのドロップは無視
     if (from_group === toGroup && String(from_area) === String(toArea)) return;
