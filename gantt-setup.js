@@ -1418,6 +1418,10 @@ function setTaskTypeFilter(type) {
     const prevColSet = _colSetName(currentTaskTypeFilter);
     // 同じフィルターを再クリックしても null にせず assembly にフォールバック
     currentTaskTypeFilter = (currentTaskTypeFilter === type) ? 'assembly' : type;
+    // 組立場所モード中に他モードへ切り替える場合は、先にフロアプラン表示を解除する
+    if (typeof isLocationMode !== 'undefined' && isLocationMode && currentTaskTypeFilter !== 'long_lead_item') {
+        exitLocationMode();
+    }
     updateFilterButtons();
 
     // フィルターON → ガントビューに切り替え
