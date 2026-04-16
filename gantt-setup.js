@@ -2195,7 +2195,7 @@ function _buildLocationSnapshots() {
             return e.getTime() === dateMs;
         });
 
-        return { date, activeLocs, endingLocs };
+        return { date, activeLocs, endingLocs, relevantLocs: relevant };
     });
 }
 
@@ -2267,7 +2267,7 @@ function renderLocationFloorPlan() {
         // E3 列
         let e3Col = `<div style="display:flex;flex-direction:column;width:${E3_W}px;flex-shrink:0;border-right:1px solid #888;">`;
         for (let area = 0; area < AREA_COUNT; area++) {
-            e3Col += _fpCell(snap.activeLocs, 'E3', area, AREA_H, E3_W);
+            e3Col += _fpCell(snap.activeLocs, snap.relevantLocs, snap.date, 'E3', area, AREA_H, E3_W);
         }
         e3Col += '</div>';
         bodyHtml += e3Col;
@@ -2284,7 +2284,7 @@ function renderLocationFloorPlan() {
         // E1 列
         let e1Col = `<div style="display:flex;flex-direction:column;width:${E1_W}px;flex-shrink:0;">`;
         for (let area = 0; area < AREA_COUNT; area++) {
-            e1Col += _fpCell(snap.activeLocs, 'E1', area, AREA_H, E1_W);
+            e1Col += _fpCell(snap.activeLocs, snap.relevantLocs, snap.date, 'E1', area, AREA_H, E1_W);
         }
         e1Col += '</div>';
         bodyHtml += e1Col;
@@ -2313,17 +2313,65 @@ function renderLocationFloorPlan() {
 }
 
 // 1セルのHTMLを生成
-function _fpCell(activeLocs, group, area, cellH, colW) {
+function _fpCell(activeLocs, allRelevantLocs, snapDate, group, area, cellH, colW) {
     const bb = area < 7 ? '1px solid #ccc' : 'none';
-    const tasks = activeLocs.filter(l => l.area_group === group && Number(l.area_number) === area);
+    const cellLocs = allRelevantLocs.filter(l => l.area_group === group && Number(l.area_number) === area);
+    const mergedMap = new Map();
+    cellLocs.forEach(l => {
+        const t = l.task || {};
+        const project = String(t.project_number || '').trim();
+        const machine = String(t.machine || '').trim();
+        const key = `${project}__${machine}`;
+        if (!mergedMap.has(key)) {
+            mergedMap.set(key, {
+                project,
+                machine,
+                entries: [],
+                rep: l,
+                minStart: null,
+                maxEnd: null
+            });
+        }
+        const bucket = mergedMap.get(key);
+        bucket.entries.push(l);
+
+        const s = t.start_date ? new Date(t.start_date.getTime()) : null;
+        if (s) {
+            s.setHours(0, 0, 0, 0);
+            if (!bucket.minStart || s < bucket.minStart) bucket.minStart = s;
+        }
+
+        const e = t.end_date ? new Date(t.end_date.getTime() - 86400000) : null;
+        if (e) {
+            e.setHours(0, 0, 0, 0);
+            if (!bucket.maxEnd || e > bucket.maxEnd) bucket.maxEnd = e;
+        }
+    });
+
+    const date = new Date(snapDate.getTime());
+    date.setHours(0, 0, 0, 0);
+    const mergedTasks = Array.from(mergedMap.values())
+        .filter(b => b.minStart && b.maxEnd && b.minStart <= date && b.maxEnd >= date)
+        // 各グループの代表を activeLocs に合わせて優先（ドラッグ対象を自然にする）
+        .map(b => {
+            const activeRep = b.entries.find(e => activeLocs.includes(e));
+            return { ...b, rep: activeRep || b.rep };
+        });
+
     let boxes = '';
-    tasks.forEach(l => {
-        const t = l.task;
+    mergedTasks.forEach(l => {
+        const t = l.rep.task;
+        const unitNames = Array.from(new Set(
+            l.entries
+                .map(e => String((e.task && e.task.unit) || '').trim())
+                .filter(Boolean)
+        ));
+        const unitLabel = unitNames.join('/') || '-';
         // エディターのみドラッグ可能
         const dragAttrs = _isEditor
-            ? `draggable="true" ondragstart="handleLocationTaskDragStart(event,${l.task_id},'${group}',${area})" ondragend="handleLocationTaskDragEnd(event)" style="background:#1565c0;color:#fff;border-radius:3px;padding:3px 4px;font-size:11px;font-family:メイリオ,sans-serif;text-align:center;line-height:1.3;max-width:${colW - 10}px;word-break:break-all;flex-shrink:0;cursor:grab;"`
+            ? `draggable="true" ondragstart="handleLocationTaskDragStart(event,${l.rep.task_id},'${group}',${area})" ondragend="handleLocationTaskDragEnd(event)" style="background:#1565c0;color:#fff;border-radius:3px;padding:3px 4px;font-size:11px;font-family:メイリオ,sans-serif;text-align:center;line-height:1.3;max-width:${colW - 10}px;word-break:break-all;flex-shrink:0;cursor:grab;"`
             : `style="background:#1565c0;color:#fff;border-radius:3px;padding:3px 4px;font-size:11px;font-family:メイリオ,sans-serif;text-align:center;line-height:1.3;max-width:${colW - 10}px;word-break:break-all;flex-shrink:0;"`;
-        boxes += `<div ${dragAttrs} title="${t.project_number || ''} ${t.machine || ''} ${t.text || ''}">
+        boxes += `<div ${dragAttrs} title="${t.project_number || ''} ${t.machine || ''} ${unitLabel}">
             ${t.project_number || ''}<br>${t.machine || ''}
         </div>`;
     });
