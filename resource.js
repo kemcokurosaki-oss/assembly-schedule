@@ -124,6 +124,7 @@ const mainLayout = {
 // リソース表示の列幅定数（担当者名 / 詳細タスク名）
 const RESOURCE_OVERVIEW_COL_WIDTH = 120;  // 担当者名列
 const RESOURCE_DETAIL_COL_WIDTH   = 350;  // 詳細表示（工事番号＋タスク名列）
+const LOCATION_RESOURCE_GRID_WIDTH = 80;  // 組立場所モードの場所ラベル列
 
 // ガントのタイムライン開始位置を取得（グリッド幅＋リサイザー幅を含む正確な値）
 function _getRenderedGanttGridWidth() {
@@ -416,8 +417,8 @@ const _DOW_NAMES = ['日', '月', '火', '水', '木', '金', '土'];
 function renderResourceCalendarHeader() {
     const header = document.getElementById('resource_calendar_header');
     if (!header) return;
-    // ボトムパネル時はカレンダーヘッダー不要
-    if (!isResourceFullscreen) {
+    // 通常のボトムパネル時は不要。組立場所モード時のみ表示する
+    if (!isResourceFullscreen && !isLocationMode) {
         header.style.display = 'none';
         return;
     }
@@ -426,9 +427,11 @@ function renderResourceCalendarHeader() {
     const scale = gantt.getScale();
     const timelineWidth = scale.full_width;
     const columnWidth = scale.col_width;
-    // 全画面時は専用幅、ボトムパネル時はガントのグリッド幅に合わせる
+    // 全画面時は専用幅、組立場所モードは固定幅、通常時はガントのグリッド幅
     const actualGridWidth = isResourceFullscreen
         ? (_resourceDetailOwner ? RESOURCE_DETAIL_COL_WIDTH : RESOURCE_OVERVIEW_COL_WIDTH)
+        : isLocationMode
+            ? LOCATION_RESOURCE_GRID_WIDTH
         : (_getRenderedGanttGridWidth());
     const dates = scale.trace_x;
     const unit = gantt.getState().scale_unit;
@@ -525,9 +528,11 @@ function showOwnerOverview() {
 }
 
 function syncResourceScroll() {
-    const left = gantt.getScrollState().x;
     const resourceContent = document.querySelector(".resource-content");
-    if (resourceContent) resourceContent.scrollLeft = left;
+    if (!resourceContent) return;
+    // 組立場所モードではメイン図面と独立して操作する
+    const left = isLocationMode ? resourceContent.scrollLeft : gantt.getScrollState().x;
+    if (!isLocationMode) resourceContent.scrollLeft = left;
     _syncCalendarHeaderScroll(left);
 }
 
@@ -843,7 +848,7 @@ gantt.attachEvent("onGanttScroll", function (left, top){
         _todayLineRafId = null;
         _drawMainTodayLine();
     });
-    if (!isResourceFullscreen) {
+    if (!isResourceFullscreen && !isLocationMode) {
         // ガント表示中のみリソースパネルと同期（全画面モード中は干渉しない）
         // フラグを立ててリソース側のscrollイベントがgantt.scrollToを呼ばないようにする
         _ganttScrolling = true;
@@ -886,8 +891,7 @@ function renderLocationResourceTimeline() {
     const timelineWidth = scale.full_width;
     const columnWidth = scale.col_width;
     // 場所ラベル列は固定幅（ガント非表示時は _getRenderedGanttGridWidth が 0 を返すため）
-    const LOCATION_GRID_WIDTH = 80;
-    const actualGridWidth = isResourceFullscreen ? RESOURCE_OVERVIEW_COL_WIDTH : LOCATION_GRID_WIDTH;
+    const actualGridWidth = isResourceFullscreen ? RESOURCE_OVERVIEW_COL_WIDTH : LOCATION_RESOURCE_GRID_WIDTH;
     const totalWidth = actualGridWidth + timelineWidth;
 
     if (ganttHidden) {
@@ -973,7 +977,7 @@ window.addEventListener('DOMContentLoaded', () => {
             // ガント→リソース同期中は逆方向の同期をスキップ（循環スクロール防止）
             if (_ganttScrolling) return;
             // ガント表示中のみガントと同期（全画面モード中は非表示のガントに触らない）
-            if (!isResourceFullscreen) {
+            if (!isResourceFullscreen && !isLocationMode) {
                 const ganttScroll = gantt.getScrollState();
                 if (Math.abs(ganttScroll.x - this.scrollLeft) > 1) {
                     gantt.scrollTo(this.scrollLeft, null);
