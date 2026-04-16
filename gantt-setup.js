@@ -1374,9 +1374,9 @@ function updateFilterButtons() {
     if (zoomRow) zoomRow.style.display = isResourceFullscreen ? 'none' : '';
     const dropdownsRow = document.getElementById('dropdowns_row');
     if (dropdownsRow) dropdownsRow.style.display = isResourceFullscreen ? 'none' : '';
-    // 担当者フィルターは非担当別モードのみ表示
+    // 担当者フィルターは通常ガント時のみ表示（担当別全画面・組立場所モードでは非表示）
     const ownerWrap = document.getElementById('owner_filter_wrap');
-    if (ownerWrap) ownerWrap.style.display = isResourceFullscreen ? 'none' : '';
+    if (ownerWrap) ownerWrap.style.display = (isResourceFullscreen || isLocationMode || currentTaskTypeFilter === 'long_lead_item') ? 'none' : '';
     const addBtn = document.getElementById('create_task_btn');
     if (addBtn) addBtn.style.display = (isResourceFullscreen || !_isEditor) ? 'none' : '';
 }
