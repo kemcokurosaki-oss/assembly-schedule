@@ -657,27 +657,86 @@ gantt.form_blocks["textarea_full"] = {
 // 担当プルダウン（ライトボックス用）
 gantt.form_blocks["owner_select_lb"] = {
     render: function(sns) {
-        return `<div class='gantt_cal_ltext'><select multiple style='width:100%;height:90px;border:1px solid #ccc;border-radius:4px;padding:4px 5px;'></select></div>`;
+        return `<div class='gantt_cal_ltext owner-lb-wrap' style='position:relative;'>
+            <div class='owner-lb-display' tabindex="0" style='width:100%;height:30px;border:1px solid #ccc;border-radius:4px;padding:0 28px 0 8px;box-sizing:border-box;display:flex;align-items:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer;background:#fff;position:relative;'>
+                -- 未選択 --
+                <span style='position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;color:#666;'>▼</span>
+            </div>
+        </div>`;
     },
     set_value: function(node, value, task, sns) {
-        const sel = node.querySelector("select");
-        const opts = getOwnerOptions(task).map(n =>
-            `<option value="${n}">${n}</option>`).join('');
-        sel.innerHTML = opts;
+        if (node._ownerLbBodyPopup) {
+            node._ownerLbBodyPopup.remove();
+            node._ownerLbBodyPopup = null;
+        }
+        if (node._ownerLbOutsideClickHandler) {
+            document.removeEventListener('click', node._ownerLbOutsideClickHandler, true);
+            node._ownerLbOutsideClickHandler = null;
+        }
+
+        const display = node.querySelector(".owner-lb-display");
         const selectedNames = String(value || '')
             .split(/[,、\s]+/)
             .map(s => s.trim())
             .filter(Boolean);
-        Array.from(sel.options).forEach(opt => {
-            opt.selected = selectedNames.includes(opt.value);
+
+        const popup = document.createElement('div');
+        popup.className = 'owner-lb-popup-global';
+        popup.style.cssText = 'display:none;position:fixed;z-index:99999;min-width:180px;max-height:260px;overflow-y:auto;background:#fff;border:1px solid #aaa;border-radius:4px;box-shadow:0 3px 10px rgba(0,0,0,0.25);padding:4px 0;';
+        popup.innerHTML = getOwnerOptions(task).map(name => `
+            <label style="display:flex;align-items:center;padding:5px 10px;cursor:pointer;font-size:13px;font-family:'メイリオ',Meiryo,sans-serif;white-space:nowrap;">
+                <input type="checkbox" value="${name}" ${selectedNames.includes(name) ? 'checked' : ''} style="margin-right:7px;cursor:pointer;">
+                ${name}
+            </label>
+        `).join('');
+        document.body.appendChild(popup);
+        node._ownerLbBodyPopup = popup;
+
+        const updateDisplay = () => {
+            const checked = Array.from(popup.querySelectorAll('input[type=checkbox]:checked')).map(cb => cb.value);
+            display.firstChild.textContent = checked.length ? checked.join(',') : '-- 未選択 --';
+        };
+        updateDisplay();
+
+        popup.querySelectorAll('input[type=checkbox]').forEach(cb => {
+            cb.addEventListener('change', updateDisplay);
         });
+
+        const togglePopup = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (popup.style.display === 'none') {
+                const rect = display.getBoundingClientRect();
+                popup.style.left = rect.left + 'px';
+                popup.style.top = (rect.bottom + 2) + 'px';
+                popup.style.display = 'block';
+            } else {
+                popup.style.display = 'none';
+            }
+        };
+        display.onclick = togglePopup;
+        display.onkeydown = (e) => {
+            if (e.key === 'Enter' || e.key === ' ') togglePopup(e);
+            if (e.key === 'Escape') popup.style.display = 'none';
+        };
+
+        popup.onclick = (e) => e.stopPropagation();
+        popup.onmousedown = (e) => e.stopPropagation();
+
+        const outsideClickHandler = (e) => {
+            if (!node.contains(e.target)) popup.style.display = 'none';
+        };
+        document.addEventListener('click', outsideClickHandler, true);
+        node._ownerLbOutsideClickHandler = outsideClickHandler;
     },
     get_value: function(node, task, sns) {
-        const sel = node.querySelector("select");
-        return Array.from(sel.selectedOptions).map(opt => opt.value).join(',');
+        const popup = node._ownerLbBodyPopup;
+        if (!popup) return '';
+        return Array.from(popup.querySelectorAll('input[type=checkbox]:checked')).map(cb => cb.value).join(',');
     },
     focus: function(node) {
-        node.querySelector("select").focus();
+        const display = node.querySelector(".owner-lb-display");
+        if (display) display.focus();
     }
 };
 
@@ -841,6 +900,7 @@ gantt.attachEvent("onBeforeLightbox", function(id) {
 
 // ライトボックスを閉じた時の後処理
 gantt.attachEvent("onAfterLightbox", function() {
+    document.querySelectorAll('.owner-lb-popup-global').forEach(el => el.remove());
     return true;
 });
 
