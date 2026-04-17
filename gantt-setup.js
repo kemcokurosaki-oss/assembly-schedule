@@ -558,47 +558,57 @@ gantt.attachEvent("onAfterTaskDelete", async function(id, item) {
     }
 });
 
-// 編集画面（ライトボックス）のセクション定義（タスクタイプ別）
+function _stripHtmlLabel(label) {
+    return String(label || '').replace(/<[^>]*>/g, '').trim();
+}
+
+function _getColumnsByTaskType(taskType) {
+    if (taskType === 'long_lead_item') return _getLongtermColumns();
+    if (taskType === 'business_trip') return _getTripColumns();
+    if (taskType === 'planning') return _getPlanningColumns();
+    return _getDrawingColumns();
+}
+
+// 編集画面（ライトボックス）のセクション定義（表示中モードのグリッド列準拠）
 function _getLightboxSections(taskType) {
-    if (taskType === 'long_lead_item') {
-        return [
-            { name: "project_number",   height: 30, map_to: "project_number", type: "textarea" },
-            { name: "machine",          height: 30, map_to: "machine",         type: "textarea" },
-            { name: "unit",             height: 30, map_to: "unit",            type: "textarea" },
-            { name: "description",      height: 30, map_to: "text",            type: "textarea_full" },
-            { name: "part_number",      height: 30, map_to: "part_number",     type: "textarea" },
-            { name: "quantity",         height: 30, map_to: "quantity",        type: "textarea" },
-            { name: "manufacturer",            height: 30, map_to: "manufacturer",           type: "textarea" },
-            { name: "owner",            height: 30, map_to: "owner",           type: "owner_select_lb" },
-            { name: "end_date",         height: 30, map_to: "end_date",        type: "template" },
-            { name: "wish_date_lb",     height: 30, map_to: "wish_date",       type: "wish_date_lb" },
-        ];
-    } else if (taskType === 'planning' || taskType === 'business_trip') {
-        return [
-            { name: "project_number",  height: 30, map_to: "project_number",  type: "textarea" },
-            { name: "customer_name",   height: 30, map_to: "customer_name",   type: "textarea" },
-            { name: "project_details", height: 30, map_to: "project_details", type: "textarea" },
-            { name: "description",     height: 30, map_to: "text",            type: "textarea_full" },
-            { name: "owner",           height: 30, map_to: "owner",           type: "owner_select_lb" },
-            { name: "date_range",      height: 30, map_to: "start_date",      type: "date_range" },
-        ];
-    } else {
-        // assembly（デフォルト）
-        return [
-            { name: "project_number",   height: 30, map_to: "project_number",  type: "textarea" },
-            { name: "machine",          height: 30, map_to: "machine",          type: "textarea" },
-            { name: "unit",             height: 30, map_to: "unit",             type: "textarea" },
-            { name: "description",      height: 30, map_to: "text",             type: "textarea_full" },
-            { name: "model_type",       height: 30, map_to: "model_type",       type: "textarea" },
-            { name: "unit2",            height: 30, map_to: "unit2",            type: "textarea" },
-            { name: "characteristic",   height: 30, map_to: "characteristic",   type: "textarea" },
-            { name: "derivation",       height: 30, map_to: "derivation",       type: "textarea" },
-            { name: "owner",            height: 30, map_to: "owner",            type: "owner_select_lb" },
-            { name: "sheets_pair",      height: 30, map_to: "total_sheets",     type: "sheets_pair" },
-            { name: "date_range",       height: 30, map_to: "start_date",       type: "date_range" },
-            { name: "wish_date_lb",     height: 30, map_to: "wish_date",        type: "wish_date_lb" },
-        ];
-    }
+    const cols = _getColumnsByTaskType(taskType);
+    const sections = [];
+    let hasDateRange = false;
+
+    cols.forEach((col) => {
+        const key = col.name;
+        if (key === 'add_btn') return;
+
+        if (col.label) {
+            gantt.locale.labels['section_' + key] = _stripHtmlLabel(col.label);
+        }
+
+        if (key === 'text') {
+            sections.push({ name: "description", height: 30, map_to: "text", type: "textarea_full" });
+            return;
+        }
+        if (key === 'owner') {
+            sections.push({ name: "owner", height: 30, map_to: "owner", type: "owner_select_lb" });
+            return;
+        }
+        if (key === 'status') {
+            sections.push({ name: "status", height: 30, map_to: "status", type: "status_select_lb" });
+            return;
+        }
+        if (key === 'start_date' || key === 'end_date' || key === 'duration') {
+            if (!hasDateRange && taskType !== 'long_lead_item') {
+                sections.push({ name: "date_range", height: 30, map_to: "start_date", type: "date_range" });
+                hasDateRange = true;
+            } else if (taskType === 'long_lead_item' && key === 'end_date') {
+                sections.push({ name: "end_date", height: 30, map_to: "end_date", type: "template" });
+            }
+            return;
+        }
+
+        sections.push({ name: key, height: 30, map_to: key, type: "textarea" });
+    });
+
+    return sections;
 }
 
 gantt.config.lightbox.sections = _getLightboxSections('assembly');
@@ -624,6 +634,8 @@ gantt.locale.labels.section_manufacturer            = "メーカー";
 gantt.locale.labels.section_customer_name    = "客先";
 gantt.locale.labels.section_project_details  = "工事名";
 gantt.locale.labels.section_wish_date_lb     = "出図希望日 / 手配期日";
+gantt.locale.labels.section_notes            = "備考";
+gantt.locale.labels.section_status           = "状態";
 
 // カスタムテンプレート（input type="date"）
 // 全幅テキストエリア（組立図面名・品名など）
@@ -645,16 +657,38 @@ gantt.form_blocks["textarea_full"] = {
 // 担当プルダウン（ライトボックス用）
 gantt.form_blocks["owner_select_lb"] = {
     render: function(sns) {
-        return `<div class='gantt_cal_ltext'><select style='width:100%;height:30px;border:1px solid #ccc;border-radius:4px;padding:0 5px;'></select></div>`;
+        return `<div class='gantt_cal_ltext'><select multiple style='width:100%;height:90px;border:1px solid #ccc;border-radius:4px;padding:4px 5px;'></select></div>`;
     },
     set_value: function(node, value, task, sns) {
         const sel = node.querySelector("select");
-        const opts = ['', ...getOwnerOptions(task)].map(n =>
-            `<option value="${n}">${n || '-- 未選択 --'}</option>`).join('');
+        const opts = getOwnerOptions(task).map(n =>
+            `<option value="${n}">${n}</option>`).join('');
         sel.innerHTML = opts;
-        sel.value = value || '';
+        const selectedNames = String(value || '')
+            .split(/[,、\s]+/)
+            .map(s => s.trim())
+            .filter(Boolean);
+        Array.from(sel.options).forEach(opt => {
+            opt.selected = selectedNames.includes(opt.value);
+        });
     },
     get_value: function(node, task, sns) {
+        const sel = node.querySelector("select");
+        return Array.from(sel.selectedOptions).map(opt => opt.value).join(',');
+    },
+    focus: function(node) {
+        node.querySelector("select").focus();
+    }
+};
+
+gantt.form_blocks["status_select_lb"] = {
+    render: function() {
+        return `<div class='gantt_cal_ltext'><select style='width:100%;height:30px;border:1px solid #ccc;border-radius:4px;padding:0 5px;'><option value=""></option><option value="未">未</option><option value="完了">完了</option></select></div>`;
+    },
+    set_value: function(node, value) {
+        node.querySelector("select").value = value || '';
+    },
+    get_value: function(node) {
         return node.querySelector("select").value;
     },
     focus: function(node) {
@@ -794,14 +828,11 @@ gantt.attachEvent("onLightboxSave", function(id, task, is_new){
 // ライトボックス表示前の処理（担当別モード時は非表示）
 gantt.attachEvent("onBeforeLightbox", function(id) {
     if (isResourceFullscreen) return false;
-    const task = gantt.getTask(id);
-    const taskType = task ? (task.task_type || 'assembly') : 'assembly';
+    const taskType = currentTaskTypeFilter || 'assembly';
     gantt.config.lightbox.sections = _getLightboxSections(taskType);
 
-    if (taskType === 'business_trip') {
-        gantt.locale.labels.section_description  = "タスク";
-    } else {
-        gantt.locale.labels.section_description  = "組立図面名 / 品名 / タスク";
+    gantt.locale.labels.section_description  = "タスク";
+    if (taskType !== 'business_trip') {
         gantt.locale.labels.section_wish_date_lb = "出図希望日";
     }
 
