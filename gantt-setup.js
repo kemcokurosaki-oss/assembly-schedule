@@ -50,8 +50,8 @@ gantt.config.editor_types.owner_select = {
         const currentValue = (task[column.map_to] || '').trim();
         const ownerOptions = getOwnerOptions(task);
 
-        // セル内：現在値を表示するだけのラベル
-        placeholder.innerHTML = `<div id="owner_ms_label" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:11px;font-family:メイリオ,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default;box-sizing:border-box;padding:0 2px;">${currentValue || '　'}</div>`;
+        // セル内：通常のインライン入力欄と同じ見た目に揃える
+        placeholder.innerHTML = `<input type="text" class="owner-ms-input" readonly value="${currentValue || ''}" style="width:100%;height:100%;cursor:default;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:2px solid #222;border-radius:4px;box-sizing:border-box;">`;
 
         // 既存ポップアップ削除
         _removeOwnerPopup();
@@ -78,8 +78,8 @@ gantt.config.editor_types.owner_select = {
         const updateLabel = () => {
             const checked = Array.from(popup.querySelectorAll('input[type=checkbox]:checked')).map(c => c.value);
             const merged = mergeOwnerNames(checked, freeInput.value);
-            const lbl = document.getElementById('owner_ms_label');
-            if (lbl) lbl.textContent = merged.join(',') || '　';
+            const input = placeholder.querySelector('.owner-ms-input');
+            if (input) input.value = merged.join(',');
         };
 
         freeInput.addEventListener('input', updateLabel);
@@ -114,8 +114,8 @@ gantt.config.editor_types.owner_select = {
         _removeOwnerPopup();
     },
     set_value: function(value, id, column, node) {
-        const lbl = node.querySelector('#owner_ms_label');
-        if (lbl) lbl.textContent = value || '　';
+        const input = node.querySelector('.owner-ms-input');
+        if (input) input.value = value || '';
         const popup = document.getElementById('owner_multiselect_popup');
         if (!popup) return;
         const task = gantt.getTask(id);
@@ -208,7 +208,7 @@ gantt.config.editor_types.start_date_editor = {
 // Supabaseには実際の完了日(YYYY-MM-DD)を保存し、gantt内部では+1日した排他的終了日を使う
 gantt.config.editor_types.completion_date = {
     show: function(id, column, config, placeholder) {
-        placeholder.innerHTML = '<input type="date" name="' + column.name + '">';
+        placeholder.innerHTML = '<input type="date" name="' + column.name + '" style="width:100%;height:100%;border:2px solid #222;border-radius:4px;box-sizing:border-box;">';
         placeholder.querySelector('input').addEventListener('change', function() {
             if (!this.value) _completionDateClear(id);
         });
