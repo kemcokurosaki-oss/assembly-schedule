@@ -9,6 +9,36 @@ function getOwnerOptions(task) {
     return String(task.major_item) === '電装' ? OWNER_OPTIONS_ELECTRICAL : OWNER_OPTIONS_ASSEMBLY;
 }
 
+function parseOwnerNames(value) {
+    return String(value || '')
+        .split(/[,、\s]+/)
+        .map(s => s.trim())
+        .filter(Boolean);
+}
+
+function splitKnownAndCustomOwners(allNames, ownerOptions) {
+    const knownSet = new Set(ownerOptions);
+    const known = [];
+    const custom = [];
+    allNames.forEach(name => {
+        if (knownSet.has(name)) known.push(name);
+        else custom.push(name);
+    });
+    return { known, custom };
+}
+
+function parseCustomOwnerInput(inputValue) {
+    return String(inputValue || '')
+        .split(/[,、\s]+/)
+        .map(s => s.trim())
+        .filter(Boolean);
+}
+
+function mergeOwnerNames(checkedNames, customInputValue) {
+    const merged = [...checkedNames, ...parseCustomOwnerInput(customInputValue)];
+    return Array.from(new Set(merged));
+}
+
 function _removeOwnerPopup() {
     const p = document.getElementById('owner_multiselect_popup');
     if (p) p.remove();
@@ -18,6 +48,7 @@ gantt.config.editor_types.owner_select = {
     show: function(id, column, config, placeholder) {
         const task = gantt.getTask(id);
         const currentValue = (task[column.map_to] || '').trim();
+        const ownerOptions = getOwnerOptions(task);
 
         // セル内：現在値を表示するだけのラベル
         placeholder.innerHTML = `<div id="owner_ms_label" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:11px;font-family:メイリオ,sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default;box-sizing:border-box;padding:0 2px;">${currentValue || '　'}</div>`;
@@ -25,30 +56,52 @@ gantt.config.editor_types.owner_select = {
         // 既存ポップアップ削除
         _removeOwnerPopup();
 
-        const selectedNames = currentValue ? currentValue.split(/[,、\s]+/).map(s => s.trim()).filter(Boolean) : [];
+        const selectedNames = parseOwnerNames(currentValue);
+        const splitOwners = splitKnownAndCustomOwners(selectedNames, ownerOptions);
 
         // チェックボックスポップアップ
         const popup = document.createElement('div');
         popup.id = 'owner_multiselect_popup';
         popup.style.cssText = 'position:fixed;background:#fff;border:1px solid #aaa;border-radius:4px;box-shadow:0 3px 10px rgba(0,0,0,0.25);z-index:99999;padding:4px 0;min-width:120px;max-height:300px;overflow-y:auto;';
 
-        getOwnerOptions(task).forEach(name => {
+        const freeInputWrap = document.createElement('div');
+        freeInputWrap.style.cssText = 'padding:6px 10px 4px 10px;border-bottom:1px solid #eee;';
+        const freeInput = document.createElement('input');
+        freeInput.type = 'text';
+        freeInput.id = 'owner_ms_free_input';
+        freeInput.placeholder = '自由入力（カンマ区切り）';
+        freeInput.style.cssText = 'width:100%;height:28px;border:1px solid #ccc;border-radius:4px;padding:0 6px;box-sizing:border-box;font-size:12px;font-family:メイリオ,Meiryo,sans-serif;';
+        freeInput.value = splitOwners.custom.join(',');
+        freeInputWrap.appendChild(freeInput);
+        popup.appendChild(freeInputWrap);
+
+        const updateLabel = () => {
+            const checked = Array.from(popup.querySelectorAll('input[type=checkbox]:checked')).map(c => c.value);
+            const merged = mergeOwnerNames(checked, freeInput.value);
+            const lbl = document.getElementById('owner_ms_label');
+            if (lbl) lbl.textContent = merged.join(',') || '　';
+        };
+
+        freeInput.addEventListener('input', updateLabel);
+
+        ownerOptions.forEach(name => {
             const label = document.createElement('label');
             label.style.cssText = 'display:flex;align-items:center;padding:5px 12px;cursor:pointer;font-size:13px;font-family:メイリオ,Meiryo,sans-serif;white-space:nowrap;user-select:none;';
             label.innerHTML = `<input type="checkbox" value="${name}" style="margin-right:7px;cursor:pointer;">${name}`;
             const cb = label.querySelector('input');
-            cb.checked = selectedNames.includes(name);
+            cb.checked = splitOwners.known.includes(name);
             // チェック変更時にセルのラベルを更新
-            cb.addEventListener('change', () => {
-                const checked = Array.from(popup.querySelectorAll('input:checked')).map(c => c.value);
-                const lbl = document.getElementById('owner_ms_label');
-                if (lbl) lbl.textContent = checked.join(',') || '　';
-            });
+            cb.addEventListener('change', updateLabel);
             popup.appendChild(label);
         });
 
-        // ポップアップ内のmousedownでフォーカスを奪わない（save_on_blur対策）
-        popup.addEventListener('mousedown', e => e.preventDefault());
+        // ポップアップ内クリックでフォーカスを奪わない（save_on_blur対策）
+        // ただし自由入力欄は通常入力できるようにする
+        popup.addEventListener('mousedown', e => {
+            const target = e.target;
+            const isFreeTextInput = target instanceof HTMLInputElement && target.type === 'text';
+            if (!isFreeTextInput) e.preventDefault();
+        });
 
         document.body.appendChild(popup);
 
@@ -65,10 +118,15 @@ gantt.config.editor_types.owner_select = {
         if (lbl) lbl.textContent = value || '　';
         const popup = document.getElementById('owner_multiselect_popup');
         if (!popup) return;
-        const names = value ? value.split(/[,、\s]+/).map(s => s.trim()).filter(Boolean) : [];
+        const task = gantt.getTask(id);
+        const ownerOptions = getOwnerOptions(task);
+        const names = parseOwnerNames(value);
+        const splitOwners = splitKnownAndCustomOwners(names, ownerOptions);
         popup.querySelectorAll('input[type=checkbox]').forEach(cb => {
-            cb.checked = names.includes(cb.value);
+            cb.checked = splitOwners.known.includes(cb.value);
         });
+        const freeInput = popup.querySelector('#owner_ms_free_input');
+        if (freeInput) freeInput.value = splitOwners.custom.join(',');
     },
     get_value: function(id, column, node) {
         const popup = document.getElementById('owner_multiselect_popup');
@@ -76,7 +134,10 @@ gantt.config.editor_types.owner_select = {
             const task = gantt.getTask(id);
             return task[column.map_to] || '';
         }
-        return Array.from(popup.querySelectorAll('input:checked')).map(c => c.value).join(',');
+        const checked = Array.from(popup.querySelectorAll('input[type=checkbox]:checked')).map(c => c.value);
+        const freeInput = popup.querySelector('#owner_ms_free_input');
+        const merged = mergeOwnerNames(checked, freeInput ? freeInput.value : '');
+        return merged.join(',');
     },
     is_changed: function(value, id, column, node) {
         return value !== this.get_value(id, column, node);
@@ -675,17 +736,20 @@ gantt.form_blocks["owner_select_lb"] = {
         }
 
         const display = node.querySelector(".owner-lb-display");
-        const selectedNames = String(value || '')
-            .split(/[,、\s]+/)
-            .map(s => s.trim())
-            .filter(Boolean);
+        const ownerOptions = getOwnerOptions(task);
+        const selectedNames = parseOwnerNames(value);
+        const splitOwners = splitKnownAndCustomOwners(selectedNames, ownerOptions);
 
         const popup = document.createElement('div');
         popup.className = 'owner-lb-popup-global';
         popup.style.cssText = 'display:none;position:fixed;z-index:99999;min-width:180px;max-height:260px;overflow-y:auto;background:#fff;border:1px solid #aaa;border-radius:4px;box-shadow:0 3px 10px rgba(0,0,0,0.25);padding:4px 0;';
-        popup.innerHTML = getOwnerOptions(task).map(name => `
+        popup.innerHTML = `
+            <div style="padding:6px 10px 4px 10px;border-bottom:1px solid #eee;">
+                <input type="text" class="owner-lb-free-input" placeholder="自由入力（カンマ区切り）" value="${splitOwners.custom.join(',')}" style="width:100%;height:28px;border:1px solid #ccc;border-radius:4px;padding:0 6px;box-sizing:border-box;font-size:12px;font-family:'メイリオ',Meiryo,sans-serif;">
+            </div>
+        ` + ownerOptions.map(name => `
             <label style="display:flex;align-items:center;padding:5px 10px;cursor:pointer;font-size:13px;font-family:'メイリオ',Meiryo,sans-serif;white-space:nowrap;">
-                <input type="checkbox" value="${name}" ${selectedNames.includes(name) ? 'checked' : ''} style="margin-right:7px;cursor:pointer;">
+                <input type="checkbox" value="${name}" ${splitOwners.known.includes(name) ? 'checked' : ''} style="margin-right:7px;cursor:pointer;">
                 ${name}
             </label>
         `).join('');
@@ -694,13 +758,17 @@ gantt.form_blocks["owner_select_lb"] = {
 
         const updateDisplay = () => {
             const checked = Array.from(popup.querySelectorAll('input[type=checkbox]:checked')).map(cb => cb.value);
-            display.firstChild.textContent = checked.length ? checked.join(',') : '-- 未選択 --';
+            const freeInput = popup.querySelector('.owner-lb-free-input');
+            const merged = mergeOwnerNames(checked, freeInput ? freeInput.value : '');
+            display.firstChild.textContent = merged.length ? merged.join(',') : '-- 未選択 --';
         };
         updateDisplay();
 
         popup.querySelectorAll('input[type=checkbox]').forEach(cb => {
             cb.addEventListener('change', updateDisplay);
         });
+        const freeInput = popup.querySelector('.owner-lb-free-input');
+        if (freeInput) freeInput.addEventListener('input', updateDisplay);
 
         const togglePopup = (e) => {
             e.preventDefault();
@@ -724,7 +792,7 @@ gantt.form_blocks["owner_select_lb"] = {
         popup.onmousedown = (e) => e.stopPropagation();
 
         const outsideClickHandler = (e) => {
-            if (!node.contains(e.target)) popup.style.display = 'none';
+            if (!node.contains(e.target) && !popup.contains(e.target)) popup.style.display = 'none';
         };
         document.addEventListener('click', outsideClickHandler, true);
         node._ownerLbOutsideClickHandler = outsideClickHandler;
@@ -732,7 +800,10 @@ gantt.form_blocks["owner_select_lb"] = {
     get_value: function(node, task, sns) {
         const popup = node._ownerLbBodyPopup;
         if (!popup) return '';
-        return Array.from(popup.querySelectorAll('input[type=checkbox]:checked')).map(cb => cb.value).join(',');
+        const checked = Array.from(popup.querySelectorAll('input[type=checkbox]:checked')).map(cb => cb.value);
+        const freeInput = popup.querySelector('.owner-lb-free-input');
+        const merged = mergeOwnerNames(checked, freeInput ? freeInput.value : '');
+        return merged.join(',');
     },
     focus: function(node) {
         const display = node.querySelector(".owner-lb-display");
