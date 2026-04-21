@@ -1542,7 +1542,12 @@ function updateFilterButtons() {
     const ownerWrap = document.getElementById('owner_filter_wrap');
     if (ownerWrap) ownerWrap.style.display = (isResourceFullscreen || isLocationMode || currentTaskTypeFilter === 'long_lead_item') ? 'none' : '';
     const addBtn = document.getElementById('create_task_btn');
-    if (addBtn) addBtn.style.display = (isResourceFullscreen || !_isEditor) ? 'none' : '';
+    const hideCreateInLocation =
+        currentTaskTypeFilter === 'long_lead_item' || isLocationMode;
+    if (addBtn) {
+        addBtn.style.display =
+            isResourceFullscreen || !_isEditor || hideCreateInLocation ? 'none' : '';
+    }
 }
 
 // タスクバークリック時の編集（担当別モードでは無効）
