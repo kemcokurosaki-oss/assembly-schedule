@@ -356,6 +356,7 @@ function setZoom(level, btn) {
     document.querySelectorAll('.zoom-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     if (isResourceView) updateResourceData();
+    if (typeof isLocationMode !== 'undefined' && isLocationMode) renderLocationFloorPlan();
 }
 
 // 選択削除ボタンの表示更新
@@ -2252,10 +2253,8 @@ function showOwnerLegend() {
 function enterLocationMode() {
     isLocationMode = true;
 
-    // ガントを非表示・ズーム行を非表示
+    // ガントを非表示（ヘッダー2行目の日単位・週単位は他モードと同様に表示）
     document.getElementById('gantt_here').style.display = 'none';
-    const zoomRow = document.getElementById('zoom_row');
-    if (zoomRow) zoomRow.style.display = 'none';
 
     // 工事番号・タスク名フィルター、新規追加ボタンを非表示
     const hideIds = ['project_filter_wrap', 'task_name_filter_wrap', 'create_task_btn', 'multi_delete_btn'];
@@ -2303,6 +2302,16 @@ function exitLocationMode() {
         const level = document.querySelector('.zoom-btn.active')?.textContent === '週単位' ? 'week' : 'day';
         gantt.ext.zoom.setLevel(level);
     }, 0);
+}
+
+// 週単位表示用：その日を含む週の月曜日 0:00
+function _mondayOfWeek(d) {
+    const date = new Date(d.getTime());
+    date.setHours(0, 0, 0, 0);
+    const day = date.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    date.setDate(date.getDate() + diff);
+    return date;
 }
 
 // ---- スナップショット生成 ----
@@ -2371,7 +2380,20 @@ function _buildLocationSnapshots() {
         }
     });
 
-    return snapshots.map(({ layoutSignature, ...rest }) => rest);
+    let out = snapshots.map(({ layoutSignature, ...rest }) => rest);
+
+    // 週単位：各週の先頭スナップショットのみ（ガントの週表示と整合）
+    if (typeof gantt !== 'undefined' && gantt.ext.zoom && gantt.ext.zoom.getCurrentLevel() !== 0) {
+        const seenWeeks = new Set();
+        out = out.filter(s => {
+            const k = _mondayOfWeek(s.date).getTime();
+            if (seenWeeks.has(k)) return false;
+            seenWeeks.add(k);
+            return true;
+        });
+    }
+
+    return out;
 }
 
 // 1日分のセル配置を比較可能な文字列に変換
@@ -2450,8 +2472,10 @@ function renderLocationFloorPlan() {
 
     let html = '<div style="display:flex;align-items:flex-start;gap:16px;padding:12px;">';
 
+    const weekZoom = typeof gantt !== 'undefined' && gantt.ext.zoom && gantt.ext.zoom.getCurrentLevel() !== 0;
+
     snapshots.forEach(snap => {
-        const dateLabel = _fmtSnapDate(snap.date);
+        const dateLabel = weekZoom ? _fmtSnapWeekRange(snap.date) : _fmtSnapDate(snap.date);
 
         // 出荷情報（この日に終わるタスク）
         let bulletHtml = '';
@@ -2604,6 +2628,13 @@ function _fpCell(activeLocs, allRelevantLocs, snapDate, group, area, cellH, colW
 
 function _fmtSnapDate(date) {
     return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+function _fmtSnapWeekRange(date) {
+    const mon = _mondayOfWeek(date);
+    const sun = new Date(mon.getTime());
+    sun.setDate(mon.getDate() + 6);
+    return `${mon.getFullYear()}/${mon.getMonth() + 1}/${mon.getDate()}〜${sun.getMonth() + 1}/${sun.getDate()}`;
 }
 
 // フロアプランのドロップ処理（エリア移動）
