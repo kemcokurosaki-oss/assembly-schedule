@@ -356,7 +356,7 @@ function setZoom(level, btn) {
     document.querySelectorAll('.zoom-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     if (isResourceView) updateResourceData();
-    if (typeof isLocationMode !== 'undefined' && isLocationMode) renderLocationFloorPlan();
+    // 組立場所の図面は配置変化ベースの日付のみ。日/週はリソースガント（renderLocationResourceTimeline 等）にのみ反映する
 }
 
 // 選択削除ボタンの表示更新
@@ -2309,16 +2309,6 @@ function exitLocationMode() {
     }, 0);
 }
 
-// 週単位表示用：その日を含む週の月曜日 0:00
-function _mondayOfWeek(d) {
-    const date = new Date(d.getTime());
-    date.setHours(0, 0, 0, 0);
-    const day = date.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    date.setDate(date.getDate() + diff);
-    return date;
-}
-
 // ---- スナップショット生成 ----
 function _buildLocationSnapshots() {
     const today = new Date();
@@ -2385,23 +2375,97 @@ function _buildLocationSnapshots() {
         }
     });
 
-    let out = snapshots.map(({ layoutSignature, ...rest }) => rest);
-
-    // 週単位：各週の先頭スナップショットのみ（ガントの週表示と整合）
-    if (typeof gantt !== 'undefined' && gantt.ext.zoom && gantt.ext.zoom.getCurrentLevel() !== 0) {
-        const seenWeeks = new Set();
-        out = out.filter(s => {
-            const k = _mondayOfWeek(s.date).getTime();
-            if (seenWeeks.has(k)) return false;
-            seenWeeks.add(k);
-            return true;
-        });
-    }
-
-    return out;
+    return snapshots.map(({ layoutSignature, ...rest }) => rest);
 }
 
-// 1日分のセル配置を比較可能な文字列に変換
+// 工事番号・機械でフロアプラン上の論理タスクを識別（同一場所でユニットが違うタスクも1ブロックにまとめる）
+function _fpTaskMergeKey(t) {
+    const project = String((t && t.project_number) || '').trim();
+    const machine = String((t && t.machine) || '').trim();
+    return `${project}__${machine}`;
+}
+
+// 列（E3 / E1）ごとに場所エントリをマージ用バケットにまとめる
+function _fpBuildBucketsForGroup(allRelevantLocs, group) {
+    const mergedMap = new Map();
+    allRelevantLocs.filter(l => l.area_group === group).forEach(l => {
+        const t = l.task || {};
+        const key = _fpTaskMergeKey(t);
+        if (!mergedMap.has(key)) {
+            mergedMap.set(key, {
+                key,
+                entries: [],
+                rep: l,
+                minStart: null,
+                maxEnd: null,
+                minArea: Infinity,
+                maxArea: -Infinity
+            });
+        }
+        const bucket = mergedMap.get(key);
+        bucket.entries.push(l);
+
+        const areaNum = Number(l.area_number);
+        if (!Number.isNaN(areaNum)) {
+            bucket.minArea = Math.min(bucket.minArea, areaNum);
+            bucket.maxArea = Math.max(bucket.maxArea, areaNum);
+        }
+
+        const s = t.start_date ? new Date(t.start_date.getTime()) : null;
+        if (s) {
+            s.setHours(0, 0, 0, 0);
+            if (!bucket.minStart || s < bucket.minStart) bucket.minStart = s;
+        }
+
+        const e = t.end_date ? new Date(t.end_date.getTime() - 86400000) : null;
+        if (e) {
+            e.setHours(0, 0, 0, 0);
+            if (!bucket.maxEnd || e > bucket.maxEnd) bucket.maxEnd = e;
+        }
+    });
+
+    return Array.from(mergedMap.values()).filter(b =>
+        b.minStart && b.maxEnd && Number.isFinite(b.minArea) && Number.isFinite(b.maxArea)
+    );
+}
+
+function _fpBucketsVisibleOnDate(buckets, snapDate, activeLocs) {
+    const date = new Date(snapDate.getTime());
+    date.setHours(0, 0, 0, 0);
+    return buckets
+        .filter(b => b.minStart && b.maxEnd && b.minStart <= date && b.maxEnd >= date)
+        .map(b => {
+            const activeRep = b.entries.find(e => activeLocs.includes(e));
+            return { ...b, rep: activeRep || b.rep };
+        });
+}
+
+// 縦方向の占有が重なるバケットを横並びレーンに割り当て
+function _fpAssignLanes(buckets) {
+    const sorted = [...buckets].sort((a, b) =>
+        a.minArea - b.minArea || (b.maxArea - b.minArea) - (a.maxArea - a.minArea)
+    );
+    const lanes = [];
+    sorted.forEach(b => {
+        let placed = false;
+        for (let i = 0; i < lanes.length; i++) {
+            const ok = lanes[i].every(({ lo, hi }) => !(b.maxArea >= lo && hi >= b.minArea));
+            if (ok) {
+                lanes[i].push({ lo: b.minArea, hi: b.maxArea });
+                b._lane = i;
+                placed = true;
+                break;
+            }
+        }
+        if (!placed) {
+            b._lane = lanes.length;
+            lanes.push([{ lo: b.minArea, hi: b.maxArea }]);
+        }
+    });
+    return Math.max(1, lanes.length);
+}
+
+// 1日分のセル配置を比較可能な文字列に変換（列またぎマージと一致）
 function _buildLocationLayoutSignature(relevantLocs, date) {
     const target = new Date(date.getTime());
     target.setHours(0, 0, 0, 0);
@@ -2410,35 +2474,12 @@ function _buildLocationLayoutSignature(relevantLocs, date) {
     const parts = [];
 
     groups.forEach(group => {
+        const buckets = _fpBuildBucketsForGroup(relevantLocs, group);
         for (let area = 0; area < areaCount; area++) {
-            const cellLocs = relevantLocs.filter(l => l.area_group === group && Number(l.area_number) === area);
-            const mergedMap = new Map();
-            cellLocs.forEach(l => {
-                const t = l.task || {};
-                const project = String(t.project_number || '').trim();
-                const machine = String(t.machine || '').trim();
-                const key = `${project}__${machine}`;
-                if (!mergedMap.has(key)) {
-                    mergedMap.set(key, { minStart: null, maxEnd: null });
-                }
-                const bucket = mergedMap.get(key);
-
-                const s = t.start_date ? new Date(t.start_date.getTime()) : null;
-                if (s) {
-                    s.setHours(0, 0, 0, 0);
-                    if (!bucket.minStart || s < bucket.minStart) bucket.minStart = s;
-                }
-
-                const e = t.end_date ? new Date(t.end_date.getTime() - 86400000) : null;
-                if (e) {
-                    e.setHours(0, 0, 0, 0);
-                    if (!bucket.maxEnd || e > bucket.maxEnd) bucket.maxEnd = e;
-                }
-            });
-
-            const visibleKeys = Array.from(mergedMap.entries())
-                .filter(([, b]) => b.minStart && b.maxEnd && b.minStart <= target && b.maxEnd >= target)
-                .map(([key]) => key)
+            const visibleKeys = buckets
+                .filter(b => b.minStart && b.maxEnd && b.minStart <= target && b.maxEnd >= target)
+                .filter(b => b.minArea <= area && b.maxArea >= area)
+                .map(b => b.key)
                 .sort();
             parts.push(`${group}:${area}:${visibleKeys.join('|')}`);
         }
@@ -2477,10 +2518,8 @@ function renderLocationFloorPlan() {
 
     let html = '<div style="display:flex;align-items:flex-start;gap:16px;padding:12px;">';
 
-    const weekZoom = typeof gantt !== 'undefined' && gantt.ext.zoom && gantt.ext.zoom.getCurrentLevel() !== 0;
-
     snapshots.forEach(snap => {
-        const dateLabel = weekZoom ? _fmtSnapWeekRange(snap.date) : _fmtSnapDate(snap.date);
+        const dateLabel = _fmtSnapDate(snap.date);
 
         // 出荷情報（この日に終わるタスク）
         let bulletHtml = '';
@@ -2513,12 +2552,8 @@ function renderLocationFloorPlan() {
         numCol += '</div>';
         bodyHtml += numCol;
 
-        // E3 列
-        let e3Col = `<div style="display:flex;flex-direction:column;width:${E3_W}px;flex-shrink:0;border-right:1px solid #888;">`;
-        for (let area = 0; area < AREA_COUNT; area++) {
-            e3Col += _fpCell(snap.activeLocs, snap.relevantLocs, snap.date, 'E3', area, AREA_H, E3_W);
-        }
-        e3Col += '</div>';
+        // E3 列（同一工事・機械は複数場所を縦にまたいで表示）
+        const e3Col = _fpColumn(snap, 'E3', AREA_COUNT, AREA_H, E3_W);
         bodyHtml += e3Col;
 
         // E2 通路列
@@ -2530,12 +2565,7 @@ function renderLocationFloorPlan() {
         e2Col += '</div>';
         bodyHtml += e2Col;
 
-        // E1 列
-        let e1Col = `<div style="display:flex;flex-direction:column;width:${E1_W}px;flex-shrink:0;">`;
-        for (let area = 0; area < AREA_COUNT; area++) {
-            e1Col += _fpCell(snap.activeLocs, snap.relevantLocs, snap.date, 'E1', area, AREA_H, E1_W);
-        }
-        e1Col += '</div>';
+        const e1Col = _fpColumn(snap, 'E1', AREA_COUNT, AREA_H, E1_W, 'none');
         bodyHtml += e1Col;
 
         bodyHtml += '</div>';
@@ -2561,85 +2591,76 @@ function renderLocationFloorPlan() {
     container.innerHTML = html;
 }
 
-// 1セルのHTMLを生成
-function _fpCell(activeLocs, allRelevantLocs, snapDate, group, area, cellH, colW) {
-    const bb = area < 7 ? '1px solid #ccc' : 'none';
-    const cellLocs = allRelevantLocs.filter(l => l.area_group === group && Number(l.area_number) === area);
-    const mergedMap = new Map();
-    cellLocs.forEach(l => {
-        const t = l.task || {};
-        const project = String(t.project_number || '').trim();
-        const machine = String(t.machine || '').trim();
-        const key = `${project}__${machine}`;
-        if (!mergedMap.has(key)) {
-            mergedMap.set(key, {
-                project,
-                machine,
-                entries: [],
-                rep: l,
-                minStart: null,
-                maxEnd: null
-            });
-        }
-        const bucket = mergedMap.get(key);
-        bucket.entries.push(l);
+// E3 / E1 いずれか1列分のHTML（行はドロップ用、タスクは縦スパンの絶対配置）
+// borderRight: E1 は列の右線なし（外枠の border に任せる）
+function _fpColumn(snap, group, areaCount, cellH, colW, borderRight = '1px solid #888') {
+    const buckets = _fpBuildBucketsForGroup(snap.relevantLocs, group);
+    const visible = _fpBucketsVisibleOnDate(buckets, snap.date, snap.activeLocs);
+    const numLanes = _fpAssignLanes(visible);
 
-        const s = t.start_date ? new Date(t.start_date.getTime()) : null;
-        if (s) {
-            s.setHours(0, 0, 0, 0);
-            if (!bucket.minStart || s < bucket.minStart) bucket.minStart = s;
-        }
+    const innerPad = 4;
+    const laneW = (colW - innerPad * 2) / numLanes;
 
-        const e = t.end_date ? new Date(t.end_date.getTime() - 86400000) : null;
-        if (e) {
-            e.setHours(0, 0, 0, 0);
-            if (!bucket.maxEnd || e > bucket.maxEnd) bucket.maxEnd = e;
-        }
-    });
+    let rowHtml = '';
+    for (let area = 0; area < areaCount; area++) {
+        const bb = area < areaCount - 1 ? '1px solid #ccc' : 'none';
+        const dropAttrs = _isEditor
+            ? `ondragover="handleLocationCellDragOver(event,this)" ondragleave="handleLocationCellDragLeave(this)" ondrop="handleLocationDrop(event,'${group}',${area},this)"`
+            : '';
+        rowHtml += `<div class="fp-drop-row" ${dropAttrs} style="height:${cellH}px;border-bottom:${bb};box-sizing:border-box;position:relative;z-index:1;"></div>`;
+    }
 
-    const date = new Date(snapDate.getTime());
-    date.setHours(0, 0, 0, 0);
-    const mergedTasks = Array.from(mergedMap.values())
-        .filter(b => b.minStart && b.maxEnd && b.minStart <= date && b.maxEnd >= date)
-        // 各グループの代表を activeLocs に合わせて優先（ドラッグ対象を自然にする）
-        .map(b => {
-            const activeRep = b.entries.find(e => activeLocs.includes(e));
-            return { ...b, rep: activeRep || b.rep };
-        });
-
-    let boxes = '';
-    mergedTasks.forEach(l => {
-        const t = l.rep.task;
+    let barsHtml = '';
+    visible.forEach(b => {
+        const t = b.rep.task;
         const unitNames = Array.from(new Set(
-            l.entries
+            b.entries
                 .map(e => String((e.task && e.task.unit) || '').trim())
                 .filter(Boolean)
         ));
         const unitLabel = unitNames.join('/') || '-';
-        // エディターのみドラッグ可能
+        const lane = b._lane || 0;
+        const left = innerPad + lane * laneW + 1;
+        const width = Math.max(2, laneW - 2);
+        const top = b.minArea * cellH + 3;
+        const height = (b.maxArea - b.minArea + 1) * cellH - 6;
+        const dragFromArea = b.rep && b.rep.area_number != null ? Number(b.rep.area_number) : b.minArea;
         const dragAttrs = _isEditor
-            ? `draggable="true" ondragstart="handleLocationTaskDragStart(event,${l.rep.task_id},'${group}',${area})" ondragend="handleLocationTaskDragEnd(event)" style="background:#1565c0;color:#fff;border-radius:3px;padding:3px 4px;font-size:11px;font-family:メイリオ,sans-serif;text-align:center;line-height:1.3;max-width:${colW - 10}px;word-break:break-all;flex-shrink:0;cursor:grab;"`
-            : `style="background:#1565c0;color:#fff;border-radius:3px;padding:3px 4px;font-size:11px;font-family:メイリオ,sans-serif;text-align:center;line-height:1.3;max-width:${colW - 10}px;word-break:break-all;flex-shrink:0;"`;
-        boxes += `<div ${dragAttrs} title="${t.project_number || ''} ${t.machine || ''} ${unitLabel}">
-            ${t.project_number || ''}<br>${t.machine || ''}
-        </div>`;
+            ? `draggable="true" ondragstart="handleLocationTaskDragStart(event,${b.rep.task_id},'${group}',${dragFromArea})" ondragend="handleLocationTaskDragEnd(event)" ondragover="event.preventDefault()" ondrop="handleLocationFloorBarDrop(event,'${group}',this)"`
+            : '';
+        const cursorStyle = _isEditor ? 'cursor:grab;' : '';
+        barsHtml += `
+            <div ${dragAttrs}
+                 style="position:absolute;left:${left}px;width:${width}px;top:${top}px;height:${height}px;z-index:2;
+                        background:#1565c0;color:#fff;border-radius:3px;padding:3px 4px;font-size:11px;font-family:メイリオ,sans-serif;
+                        text-align:center;line-height:1.3;word-break:break-all;box-sizing:border-box;overflow:hidden;
+                        display:flex;align-items:center;justify-content:center;pointer-events:auto;${cursorStyle}"
+                 title="${(t && t.project_number) || ''} ${(t && t.machine) || ''} ${unitLabel}">
+                ${(t && t.project_number) || ''}<br>${(t && t.machine) || ''}
+            </div>`;
     });
-    // エディターのみドロップ受け付け
-    const dropAttrs = _isEditor
-        ? `ondragover="handleLocationCellDragOver(event,this)" ondragleave="handleLocationCellDragLeave(this)" ondrop="handleLocationDrop(event,'${group}',${area},this)"`
-        : '';
-    return `<div ${dropAttrs} style="height:${cellH}px;border-bottom:${bb};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:3px;box-sizing:border-box;overflow:hidden;">${boxes}</div>`;
+
+    return `<div class="fp-col" data-fp-cellh="${cellH}" style="position:relative;width:${colW}px;flex-shrink:0;border-right:${borderRight};box-sizing:border-box;display:flex;flex-direction:column;">
+        ${rowHtml}
+        <div style="position:absolute;left:0;top:0;right:0;bottom:0;z-index:2;pointer-events:none;">${barsHtml}</div>
+    </div>`;
+}
+
+function handleLocationFloorBarDrop(event, toGroup, barEl) {
+    if (event) event.preventDefault();
+    const col = barEl && barEl.closest ? barEl.closest('.fp-col') : null;
+    if (!col || !event) return;
+    const cellH = Number(col.dataset.fpCellh) || 75;
+    const rect = col.getBoundingClientRect();
+    const y = event.clientY - rect.top;
+    const areaCount = 8;
+    let toArea = Math.floor(y / cellH);
+    toArea = Math.max(0, Math.min(areaCount - 1, toArea));
+    handleLocationDrop(event, toGroup, toArea, null);
 }
 
 function _fmtSnapDate(date) {
     return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
-}
-
-function _fmtSnapWeekRange(date) {
-    const mon = _mondayOfWeek(date);
-    const sun = new Date(mon.getTime());
-    sun.setDate(mon.getDate() + 6);
-    return `${mon.getFullYear()}/${mon.getMonth() + 1}/${mon.getDate()}〜${sun.getMonth() + 1}/${sun.getDate()}`;
 }
 
 // フロアプランのドロップ処理（エリア移動）
@@ -2674,7 +2695,7 @@ function handleLocationCellDragLeave(cellEl) {
 function _clearLocationDropHighlights() {
     const fp = document.getElementById('location_floorplan');
     if (!fp) return;
-    fp.querySelectorAll('[ondrop*="handleLocationDrop"]').forEach(el => {
+    fp.querySelectorAll('.fp-drop-row').forEach(el => {
         el.style.background = '';
     });
 }
