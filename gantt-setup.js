@@ -2501,18 +2501,21 @@ function renderLocationFloorPlan() {
 
     // レイアウト定数
     const AREA_COUNT   = 8;
-    const AREA_H       = 75;   // エリア1行の高さ (px)
+    const AREA_H       = 75;   // エリア1行の高さ (px) ※行セルは border-box で下線込みの高さ
     const E1_W         = 115;
-    const E2_W         = 50;   // E2 通路
+    const E2_W         = 50;   // E2 通路（コンテンツ幅。外枠は E2_COL_W）
     const E3_W         = 115;
     const ROW_NUM_W    = 22;
     const COL_HDR_H    = 20;   // 列ヘッダー高さ
+    // 列右罫線を width に含める（border-box）ための外幅。ヘッダー・本体で同じ値に揃える
+    const ROW_COL_W    = ROW_NUM_W + 1; // 行番号列 + 右線 1px
+    const E2_COL_W     = E2_W + 1;      // 通路列 + 右線 1px
 
-    // グリッド列定義 [幅, ラベル, 背景色, 文字色]
+    // グリッド列定義 [幅, ラベル, 背景色, 文字色] ※幅は border-box の外寸
     const COL_DEFS = [
-        { w: ROW_NUM_W, label: '',       bg: '#ddd',    fc: '' },
+        { w: ROW_COL_W, label: '',       bg: '#ddd',    fc: '' },
         { w: E3_W,      label: 'E3',     bg: '#bbdefb', fc: '#1565c0' },
-        { w: E2_W,      label: '通路',   bg: '#d0d0d0', fc: '#555' },
+        { w: E2_COL_W,  label: '通路',   bg: '#d0d0d0', fc: '#555' },
         { w: E1_W,      label: 'E1',     bg: '#bbdefb', fc: '#1565c0' },
     ];
 
@@ -2532,22 +2535,22 @@ function renderLocationFloorPlan() {
             bulletHtml += `<div>・${loc.task.project_number || ''}(${loc.task.machine || ''})出荷${ds}</div>`;
         });
 
-        // グリッド列ヘッダー行
-        let hdrHtml = '<div style="display:flex;">';
+        // グリッド列ヘッダー行（罫線込みの外寸を本体列と一致させる）
+        let hdrHtml = '<div style="display:flex;box-sizing:border-box;">';
         COL_DEFS.forEach((c, ci) => {
             const br = ci < COL_DEFS.length - 1 ? '1px solid #888' : 'none';
-            hdrHtml += `<div style="width:${c.w}px;min-width:${c.w}px;height:${COL_HDR_H}px;background:${c.bg};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:${c.fc};border-right:${br};flex-shrink:0;">${c.label}</div>`;
+            hdrHtml += `<div style="box-sizing:border-box;width:${c.w}px;min-width:${c.w}px;height:${COL_HDR_H}px;background:${c.bg};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:${c.fc};border-right:${br};flex-shrink:0;">${c.label}</div>`;
         });
         hdrHtml += '</div>';
 
         // グリッド本体
         let bodyHtml = '<div style="display:flex;">';
 
-        // 行番号列
-        let numCol = `<div style="display:flex;flex-direction:column;width:${ROW_NUM_W}px;flex-shrink:0;border-right:1px solid #888;">`;
+        // 行番号列（高さは fp-drop-row と同じ border-box）
+        let numCol = `<div style="display:flex;flex-direction:column;box-sizing:border-box;width:${ROW_COL_W}px;min-width:${ROW_COL_W}px;flex-shrink:0;border-right:1px solid #888;">`;
         for (let area = 0; area < AREA_COUNT; area++) {
             const bb = area < AREA_COUNT - 1 ? '1px solid #ccc' : 'none';
-            numCol += `<div style="height:${AREA_H}px;border-bottom:${bb};display:flex;align-items:center;justify-content:center;font-size:12px;color:#e53935;font-weight:bold;">${area}</div>`;
+            numCol += `<div style="box-sizing:border-box;height:${AREA_H}px;border-bottom:${bb};display:flex;align-items:center;justify-content:center;font-size:12px;color:#e53935;font-weight:bold;">${area}</div>`;
         }
         numCol += '</div>';
         bodyHtml += numCol;
@@ -2557,10 +2560,10 @@ function renderLocationFloorPlan() {
         bodyHtml += e3Col;
 
         // E2 通路列
-        let e2Col = `<div style="display:flex;flex-direction:column;width:${E2_W}px;flex-shrink:0;border-right:1px solid #888;background:#e0e0e0;">`;
+        let e2Col = `<div style="display:flex;flex-direction:column;box-sizing:border-box;width:${E2_COL_W}px;min-width:${E2_COL_W}px;flex-shrink:0;border-right:1px solid #888;background:#e0e0e0;">`;
         for (let area = 0; area < AREA_COUNT; area++) {
             const bb = area < AREA_COUNT - 1 ? '1px solid #bbb' : 'none';
-            e2Col += `<div style="height:${AREA_H}px;border-bottom:${bb};"></div>`;
+            e2Col += `<div style="box-sizing:border-box;height:${AREA_H}px;border-bottom:${bb};"></div>`;
         }
         e2Col += '</div>';
         bodyHtml += e2Col;
@@ -2578,7 +2581,7 @@ function renderLocationFloorPlan() {
                     <div style="border:1px solid #888;padding:2px 10px;font-size:13px;font-family:メイリオ,sans-serif;background:#fff;text-align:center;">${dateLabel}</div>
                     <span style="font-size:13px;margin-left:4px;">〜</span>
                 </div>
-                <div style="min-height:36px;font-size:12px;font-family:メイリオ,sans-serif;color:#333;line-height:1.7;margin-bottom:4px;width:${ROW_NUM_W + E3_W + E2_W + E1_W}px;">${bulletHtml}</div>
+                <div style="min-height:36px;font-size:12px;font-family:メイリオ,sans-serif;color:#333;line-height:1.7;margin-bottom:4px;width:${ROW_COL_W + E3_W + E2_COL_W + E1_W}px;">${bulletHtml}</div>
                 <div style="border:2px solid #888;display:inline-flex;flex-direction:column;background:#fff;">
                     ${hdrHtml}
                     ${bodyHtml}
