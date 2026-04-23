@@ -12,6 +12,8 @@ const EDITORS = [
     'm2-kusakabe@kusakabe.com', // 常務
     'e-kurosaki@kusakabe.com',  // 工程管理者
     's-morimura@kusakabe.com',  // 工程管理者
+    'h-yonezawa@kusakabe.com',
+    'i-kimura@kusakabe.com',
     // 組立部員は確定後にここに追加
 ];
 let _isEditor = false;
