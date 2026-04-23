@@ -1,9 +1,23 @@
 // Supabase 設定
 const S_URL = "https://dgekjzkrybrswsxlcbvh.supabase.co";
 const S_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRnZWtqemtyeWJyc3dzeGxjYnZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4ODQ3MjIsImV4cCI6MjA4NDQ2MDcyMn0.BsEj53lV3p76yE9fMPTaLn7ocKTNzYPTqIAnBafYItU";
-// createClient呼び出し前にURLのtype情報を保存（Supabaseがhashを処理・クリアする前に取得）
-const _pageInitType = new URLSearchParams(window.location.hash.replace('#', '?')).get('type')
-                   || new URLSearchParams(window.location.search).get('type');
+// createClient 呼び出し前に URL をスナップショット（トークン・code 除去前に取得）
+// PKCE の招待・確認リンクは ?code= のみで type が付かないことがある
+const _authUrlSnapshot = (function () {
+    try {
+        const u = new URL(window.location.href);
+        const hash = u.hash.startsWith('#') ? u.hash.slice(1) : '';
+        const hp = new URLSearchParams(hash);
+        const sp = new URLSearchParams(u.search);
+        return {
+            type: hp.get('type') || sp.get('type') || '',
+            hadPkceCode: !!sp.get('code'),
+        };
+    } catch (_e) {
+        return { type: '', hadPkceCode: false };
+    }
+})();
+const _pageInitType = _authUrlSnapshot.type;
 const supabaseClient = supabase.createClient(S_URL, S_KEY);
 
 // ===== 認証管理 =====
@@ -17,6 +31,22 @@ const EDITORS = [
     // 組立部員は確定後にここに追加
 ];
 let _isEditor = false;
+let _offeredPasswordFromEmailLink = false;
+
+/** メール内リンク（招待・確認・復旧）直後にパスワード設定を出すか */
+function _shouldOpenSetPasswordFromUrl(event, session) {
+    if (!session) return false;
+    if (event === 'PASSWORD_RECOVERY') return true;
+    const t = _pageInitType;
+    if (t === 'invite' || t === 'signup' || t === 'recovery') {
+        return event === 'SIGNED_IN' || event === 'INITIAL_SESSION';
+    }
+    // PKCE: 招待/確認/リセットで ?code= のみ届く → type が無い
+    if (_authUrlSnapshot.hadPkceCode && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
+        return true;
+    }
+    return false;
+}
 
 function _updateUIForAuth(isEditor) {
     _isEditor = isEditor;
@@ -269,12 +299,14 @@ document.addEventListener('keydown', function(e) {
 });
 
 // 認証状態の変化を監視（ページロード時・ログイン・ログアウト時に自動で呼ばれる）
-supabaseClient.auth.onAuthStateChange((_event, session) => {
-    if (_event === 'PASSWORD_RECOVERY' || (_event === 'SIGNED_IN' && _pageInitType === 'invite')) {
-        // 招待メール・パスワードリセットのリンクからのアクセス
-        openSetPasswordDialog();
-    } else {
-        const email = session?.user?.email || '';
-        _updateUIForAuth(!!session && EDITORS.includes(email));
+supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (_shouldOpenSetPasswordFromUrl(event, session)) {
+        if (!_offeredPasswordFromEmailLink) {
+            _offeredPasswordFromEmailLink = true;
+            openSetPasswordDialog();
+        }
+        return;
     }
+    const email = session?.user?.email || '';
+    _updateUIForAuth(!!session && EDITORS.includes(email));
 });
