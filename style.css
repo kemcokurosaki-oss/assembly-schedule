@@ -455,9 +455,9 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
     border-right: 1px solid #607d8b !important;
     border-bottom: 1px solid #607d8b !important;
     line-height: normal !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     text-align: center !important;
 }
 
