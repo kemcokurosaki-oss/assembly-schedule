@@ -64,19 +64,94 @@ const mainLayout = {
     ]
 };
 
+function _getActiveGanttZoomLevel() {
+    return document.querySelector('.zoom-btn.active')?.textContent === '週単位' ? 'week' : 'day';
+}
+
+/**
+ * setSizes 後にズームを再適用してスケールセルを再構築する。
+ * withScrollNudge=true のとき微小横スクロールで再描画を促す。
+ */
+function _refreshMainGanttTimelineScale(withScrollNudge) {
+    if (!window.gantt) return;
+    if (typeof isResourceFullscreen !== 'undefined' && isResourceFullscreen) return;
+    const ge = document.getElementById('gantt_here');
+    if (!ge || ge.style.display === 'none') return;
+    if (withScrollNudge === undefined) withScrollNudge = true;
+
+    gantt.setSizes();
+    if (gantt.ext && gantt.ext.zoom) {
+        gantt.ext.zoom.setLevel(_getActiveGanttZoomLevel());
+    }
+    if (!withScrollNudge) return;
+    const s = gantt.getScrollState();
+    gantt.scrollTo(s.x + 1, s.y);
+    requestAnimationFrame(() => {
+        if (!window.gantt) return;
+        gantt.scrollTo(s.x, s.y);
+    });
+}
+
+function _scheduleRefreshMainGanttAfterShow() {
+    requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+            _refreshMainGanttTimelineScale(true);
+        });
+    });
+}
+
+document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState !== 'visible') return;
+    _scheduleRefreshMainGanttAfterShow();
+});
+
+window.addEventListener('pageshow', function (ev) {
+    if (ev.persisted) _scheduleRefreshMainGanttAfterShow();
+});
+
 // リサイズ機能
 (function() {
     let isResizing = false;
     let animationFrameId = null;
+    let ganttSizeRaf1 = null;
+    let ganttSizeRaf2 = null;
     const minHeight = 50;
     const maxHeight = 800;
+
+    function _cancelPendingGanttSizeRaf() {
+        if (ganttSizeRaf1 != null) { cancelAnimationFrame(ganttSizeRaf1); ganttSizeRaf1 = null; }
+        if (ganttSizeRaf2 != null) { cancelAnimationFrame(ganttSizeRaf2); ganttSizeRaf2 = null; }
+    }
+
+    /** flex 確定後に setSizes+ズーム再適用。ドラッグ中は 2 フレーム遅延で連続呼び出しをまとめる */
+    function _queueGanttSetSizesAfterFlexTwoFrames(requireResizing) {
+        if (!window.gantt) return;
+        if (typeof isResourceFullscreen !== 'undefined' && isResourceFullscreen) return;
+        const ge = document.getElementById('gantt_here');
+        if (ge && ge.style.display === 'none') return;
+        if (ganttSizeRaf1 != null) return;
+        ganttSizeRaf1 = requestAnimationFrame(() => {
+            ganttSizeRaf1 = null;
+            if (ganttSizeRaf2 != null) cancelAnimationFrame(ganttSizeRaf2);
+            ganttSizeRaf2 = requestAnimationFrame(() => {
+                ganttSizeRaf2 = null;
+                if (!window.gantt) return;
+                if (typeof isResourceFullscreen !== 'undefined' && isResourceFullscreen) return;
+                if (requireResizing && !isResizing) return;
+                const el = document.getElementById('gantt_here');
+                if (el && el.style.display === 'none') return;
+                _refreshMainGanttTimelineScale(!requireResizing);
+            });
+        });
+    }
 
     window.addEventListener('DOMContentLoaded', () => {
         const resizer = document.getElementById('resource_resizer');
         const panel = document.getElementById('resource_panel');
-        const ganttContainer = document.getElementById('gantt_here');
 
         if (!resizer || !panel) return;
+
+        resizer.setAttribute('title', 'メイン工程表とリソース表示の境界の高さを変更');
 
         resizer.addEventListener('mousedown', (e) => {
             isResizing = true;
@@ -87,8 +162,7 @@ const mainLayout = {
 
         window.addEventListener('mousemove', (e) => {
             if (!isResizing) return;
-
-            if (animationFrameId) return; // すでに処理待ちならスキップ
+            if (animationFrameId) return;
 
             animationFrameId = requestAnimationFrame(() => {
                 const windowHeight = window.innerHeight;
@@ -98,10 +172,8 @@ const mainLayout = {
                 if (newHeight > maxHeight) newHeight = maxHeight;
                 if (newHeight > windowHeight * 0.8) newHeight = windowHeight * 0.8;
 
-                // パネルの高さを更新（flexboxによりメインガントは自動で縮む）
-                // ドラッグ中は gantt.setSizes() を呼ばない：
-                // 毎フレームのスケール再構築でカレンダーヘッダーの文字が消えるのを防ぐため
                 panel.style.height = newHeight + 'px';
+                _queueGanttSetSizesAfterFlexTwoFrames(true);
 
                 animationFrameId = null;
             });
@@ -116,16 +188,19 @@ const mainLayout = {
                     cancelAnimationFrame(animationFrameId);
                     animationFrameId = null;
                 }
-                // 最後に確実にサイズを合わせる
+                _cancelPendingGanttSizeRaf();
                 if (window.gantt) {
-                    gantt.setSizes();
-                }
-                // カレンダーヘッダーを再描画してテキストが常に表示されるよう確保
-                if (typeof renderResourceCalendarHeader === 'function') {
-                    renderResourceCalendarHeader();
-                }
-                if (typeof syncResourceScroll === 'function') {
-                    syncResourceScroll();
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            _refreshMainGanttTimelineScale(true);
+                            if (typeof renderResourceCalendarHeader === 'function') {
+                                renderResourceCalendarHeader();
+                            }
+                            if (typeof syncResourceScroll === 'function') {
+                                syncResourceScroll();
+                            }
+                        });
+                    });
                 }
             }
         });
