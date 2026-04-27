@@ -1760,6 +1760,18 @@ function _initOwnerFilterDropdown() {
     list.innerHTML = assemblySeparator + assemblyItems + separator + electricalItems;
 }
 
+let _calendarRefreshPending = false;
+function _refreshCalendarHeader() {
+    if (_calendarRefreshPending) return;
+    _calendarRefreshPending = true;
+    setTimeout(() => {
+        _calendarRefreshPending = false;
+        gantt.setSizes();
+        const currentLevel = document.querySelector('.zoom-btn.active')?.textContent === '週単位' ? 'week' : 'day';
+        gantt.ext.zoom.setLevel(currentLevel);
+    }, 0);
+}
+
 function toggleProjectFilterDropdown() {
     const dd = document.getElementById('project_filter_dropdown');
     if (dd) dd.style.display = dd.style.display === 'none' ? '' : 'none';
@@ -1771,6 +1783,7 @@ function projectFilterAllChanged(checkbox) {
     gantt.render();
     _updateProjectFilterBtn();
     updateDisplay();
+    _refreshCalendarHeader();
 }
 
 function projectFilterItemChanged() {
@@ -1782,6 +1795,7 @@ function projectFilterItemChanged() {
     gantt.render();
     _updateProjectFilterBtn();
     updateDisplay();
+    _refreshCalendarHeader();
 }
 
 function _updateProjectFilterBtn() {
