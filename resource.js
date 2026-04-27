@@ -261,8 +261,8 @@ function renderResourceTimeline(owners) {
             const rowTasks = allOwnerTasks.filter(t => {
                 const tt = t.task_type;
                 if (rowDef.type === 'drawing') {
-                    // null・空・'drawing' はすべて組立タスクとして扱う
-                    return !tt || tt === '' || String(tt) === 'null' || tt === 'drawing';
+                    // null・空・'drawing'・'assembly' はすべて組立タスクとして扱う（DBでは assembly と保存されることがある）
+                    return !tt || tt === '' || String(tt) === 'null' || tt === 'drawing' || tt === 'assembly';
                 }
                 return String(tt) === rowDef.type;
             });
@@ -400,7 +400,9 @@ function renderOwnerDetailTimeline(ownerName) {
         const right = hasDate ? gantt.posFromDate(t.end_date) : 0;
         const barWidth = hasDate ? Math.max(2, right - left) : 0;
         const tt = t.task_type;
-        const typeLabel = (!tt || tt === '' || String(tt) === 'null' || tt === 'drawing') ? '組立' : (tt === 'business_trip' ? '出張' : tt);
+        const typeLabel = (!tt || tt === '' || String(tt) === 'null' || tt === 'drawing' || tt === 'assembly')
+            ? '組立'
+            : (tt === 'business_trip' ? '出張' : tt);
 
         html += `
             <div class="resource-item" style="display: flex; border-bottom: 1px solid #eee; min-height: 30px; height: 30px; align-items: stretch; width: ${totalWidth}px;">
