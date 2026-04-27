@@ -2967,10 +2967,12 @@ function _fpColumn(snap, group, areaCount, cellH, colW, borderRight = '1px solid
             ? `draggable="true" ondragstart="handleLocationTaskDragStart(event,${b.rep.task_id},'${group}',${dragFromArea})" ondragend="handleLocationTaskDragEnd(event)" ondragover="event.preventDefault()" ondrop="handleLocationFloorBarDrop(event,'${group}',this)"`
             : '';
         const cursorStyle = _isEditor ? 'cursor:grab;' : '';
+        const ownerCls = getOwnerColorClass(t && t.owner);
         barsHtml += `
             <div ${dragAttrs}
+                 class="fp-task-block ${ownerCls}"
                  style="position:absolute;left:${left}px;width:${width}px;top:${top}px;height:${height}px;z-index:2;
-                        background:#1565c0;color:#fff;border-radius:3px;padding:3px 4px;font-size:11px;font-family:メイリオ,sans-serif;
+                        border-radius:3px;padding:3px 4px;font-size:11px;font-family:メイリオ,sans-serif;
                         text-align:center;line-height:1.3;word-break:break-all;box-sizing:border-box;overflow:hidden;
                         display:flex;align-items:center;justify-content:center;pointer-events:auto;${cursorStyle}"
                  title="${(t && t.project_number) || ''} ${(t && t.machine) || ''} ${unitLabel}">

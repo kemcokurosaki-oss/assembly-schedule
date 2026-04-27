@@ -32,12 +32,19 @@ const ownerColorMap = {
     "外注(電)":   "owner-gaichuu-e"
 };
 
+/** 担当文字列の先頭＝メイン担当（カンマ・読点・空白区切り） */
+function getMainOwnerName(ownerStr) {
+    const owners = String(ownerStr || '')
+        .split(/[,、\s]+/)
+        .map(o => o.trim())
+        .filter(Boolean);
+    return owners[0] || '';
+}
+
 function getOwnerColorClass(ownerStr) {
-    if (!ownerStr) return "owner-default";
-    const owners = String(ownerStr).split(/[,、\s]+/).map(o => o.trim());
-    for (const owner of owners) {
-        if (ownerColorMap[owner]) return ownerColorMap[owner];
-    }
+    const main = getMainOwnerName(ownerStr);
+    if (!main) return "owner-default";
+    if (ownerColorMap[main]) return ownerColorMap[main];
     return "owner-default";
 }
 
@@ -968,11 +975,12 @@ function renderLocationResourceTimeline() {
             const left  = gantt.posFromDate(t.start_date);
             const right = gantt.posFromDate(t.end_date);
             const width = Math.max(2, right - left);
+            const ownerCls = getOwnerColorClass(t.owner);
             html += `
-                <div class="resource-cell-bar"
-                     style="position:absolute;top:4px;height:22px;left:${left}px;width:${width}px;z-index:10;background:#1565c0;border-radius:2px;"
+                <div class="resource-cell-bar ${ownerCls}"
+                     style="position:absolute;top:4px;height:22px;left:${left}px;width:${width}px;z-index:10;border-radius:2px;"
                      title="${t.project_number || ''} ${t.machine || ''} ${t.text || ''}">
-                     <span class="resource-bar-text" style="color:#fff;font-size:11px;font-weight:bold;">${t.project_number || ''} ${t.machine || ''}</span>
+                     <span class="resource-bar-text" style="font-size:11px;font-weight:bold;">${t.project_number || ''} ${t.machine || ''}</span>
                 </div>
             `;
         });
