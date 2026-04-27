@@ -48,12 +48,8 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
     /* height: 100% を削除して flexbox に任せる */
     min-height: 0;
 }
-/* タイムラインの横スクロール時にGPUコンポジットレイヤーを使用してスムーズにする */
-#gantt_here .gantt_task,
-#gantt_here .gantt_data_area,
-#gantt_here .gantt_task_scale {
-    will-change: transform;
-}
+/* リサイズ中のヘッダー文字欠け対策:
+   メインタイムラインのレイヤー化最適化は描画不安定の原因になるため無効化 */
 
 /* 組立場所フロアプランビュー */
 #location_floorplan {
@@ -535,10 +531,16 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
     border-bottom: none !important;
     font-family: "メイリオ", Meiryo, sans-serif !important;
     font-size: 11px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     line-height: normal !important;
+    backface-visibility: hidden;
+    -webkit-font-smoothing: antialiased;
+}
+#gantt_here .gantt_task_scale,
+#gantt_here .gantt_scale_line {
+    transform: translateZ(0);
 }
 #gantt_here .gantt_scale_line:first-child .gantt_scale_cell {
     font-size: 12px !important;
