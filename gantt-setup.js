@@ -1856,6 +1856,7 @@ function taskNameFilterAllChanged(checkbox) {
     currentTaskNameFilter = [];
     gantt.render();
     _updateTaskNameFilterBtn();
+    _refreshCalendarHeader();
 }
 
 function taskNameFilterItemChanged() {
@@ -1866,6 +1867,7 @@ function taskNameFilterItemChanged() {
     if (allChk) allChk.checked = selected.length === 0;
     gantt.render();
     _updateTaskNameFilterBtn();
+    _refreshCalendarHeader();
 }
 
 function _updateTaskNameFilterBtn() {
