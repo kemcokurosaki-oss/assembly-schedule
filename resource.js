@@ -101,8 +101,10 @@ const mainLayout = {
                 // パネルの高さを更新（flexboxによりメインガントは自動で縮む）
                 panel.style.height = newHeight + 'px';
 
-                // ガントのサイズ調整（描画を伴うので負荷が高い）
-                if (window.gantt) {
+                // ガントが表示中の場合のみドラッグ中もサイズ調整
+                // 非表示時（組立場所モード等）はスキップして再描画による文字消えを防ぐ
+                const ganttEl = document.getElementById('gantt_here');
+                if (window.gantt && ganttEl && ganttEl.style.display !== 'none') {
                     gantt.setSizes();
                 }
 
@@ -122,6 +124,13 @@ const mainLayout = {
                 // 最後に確実にサイズを合わせる
                 if (window.gantt) {
                     gantt.setSizes();
+                }
+                // カレンダーヘッダーを再描画してテキストが常に表示されるよう確保
+                if (typeof renderResourceCalendarHeader === 'function') {
+                    renderResourceCalendarHeader();
+                }
+                if (typeof syncResourceScroll === 'function') {
+                    syncResourceScroll();
                 }
             }
         });
