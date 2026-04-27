@@ -1526,18 +1526,42 @@ function _parseSupabaseDate(str) {
     return new Date(s);
 }
 
+/** PostgREST の 1 リクエストあたりの行上限（既定 1000 など）を超えないよう tasks を繰り返し取得する */
+const _TASKS_PAGE_SIZE = 1000;
+
+/**
+ * @param {(from: number, to: number) => Promise<{ data: unknown[] | null, error: Error | null }>} fetchPage
+ */
+async function _paginateTasksFetch(fetchPage) {
+    const all = [];
+    let from = 0;
+    for (;;) {
+        const to = from + _TASKS_PAGE_SIZE - 1;
+        const { data, error } = await fetchPage(from, to);
+        if (error) return { data: null, error };
+        if (!data || data.length === 0) break;
+        all.push(...data);
+        if (data.length < _TASKS_PAGE_SIZE) break;
+        from += _TASKS_PAGE_SIZE;
+    }
+    return { data: all, error: null };
+}
+
 // データ読み込み
 async function loadData() {
     const [tasksResult, locationsResult] = await Promise.all([
-        supabaseClient
-            .from('tasks')
-            .select('*')
-            .neq('is_archived', true)
-            .order('project_number', { ascending: true })
-            .order('machine', { ascending: true, nullsFirst: true })
-            .order('unit', { ascending: true, nullsFirst: true })
-            .order('start_date', { ascending: true, nullsFirst: true })
-            .order('id', { ascending: true }),
+        _paginateTasksFetch((from, to) =>
+            supabaseClient
+                .from('tasks')
+                .select('*')
+                .neq('is_archived', true)
+                .order('project_number', { ascending: true })
+                .order('machine', { ascending: true, nullsFirst: true })
+                .order('unit', { ascending: true, nullsFirst: true })
+                .order('start_date', { ascending: true, nullsFirst: true })
+                .order('id', { ascending: true })
+                .range(from, to)
+        ),
         supabaseClient
             .from('task_locations')
             .select('task_id, area_group, area_number')
@@ -1548,10 +1572,16 @@ async function loadData() {
         console.error("Supabase error:", error);
         return;
     }
+    const rawTaskRows = Array.isArray(data) ? data : [];
+    if (!Array.isArray(data) && data != null) {
+        console.warn("loadData: tasks の形式が想定外です", data);
+    }
+    // ページングで複数回取得しているため、Network では tasks が複数リクエストに分かれる
+    console.info(`[組立工程表] tasks 読込完了: ${rawTaskRows.length} 行`);
 
     const today = new Date().toISOString().split('T')[0];
 
-    const parsedTasks = data.map(t => {
+    const parsedTasks = rawTaskRows.map(t => {
         const startDate = t.start_date
             ? _parseSupabaseDate(t.start_date)
             : new Date(today + 'T00:00:00Z');
@@ -1986,10 +2016,18 @@ function updateDisplay() {
 
 // 工事番号フィルターの初期化
 async function initProjectSelect(projectParam) {
-    const { data } = await supabaseClient
-        .from('tasks')
-        .select('project_number, customer_name, project_details, is_detailed, major_item')
-        .neq('is_archived', true);
+    const { data, error } = await _paginateTasksFetch((from, to) =>
+        supabaseClient
+            .from('tasks')
+            .select('project_number, customer_name, project_details, is_detailed, major_item')
+            .neq('is_archived', true)
+            .order('id', { ascending: true })
+            .range(from, to)
+    );
+    if (error) {
+        console.error('initProjectSelect tasks 取得エラー:', error);
+        return;
+    }
     if (!data) return;
 
     // 工事番号ごとの情報をマップに格納（is_detailed=false かつ major_item=組立 or 電装 のタスクのみ）
