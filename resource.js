@@ -99,14 +99,9 @@ const mainLayout = {
                 if (newHeight > windowHeight * 0.8) newHeight = windowHeight * 0.8;
 
                 // パネルの高さを更新（flexboxによりメインガントは自動で縮む）
+                // ドラッグ中は gantt.setSizes() を呼ばない：
+                // 毎フレームのスケール再構築でカレンダーヘッダーの文字が消えるのを防ぐため
                 panel.style.height = newHeight + 'px';
-
-                // ガントが表示中の場合のみドラッグ中もサイズ調整
-                // 非表示時（組立場所モード等）はスキップして再描画による文字消えを防ぐ
-                const ganttEl = document.getElementById('gantt_here');
-                if (window.gantt && ganttEl && ganttEl.style.display !== 'none') {
-                    gantt.setSizes();
-                }
 
                 animationFrameId = null;
             });
