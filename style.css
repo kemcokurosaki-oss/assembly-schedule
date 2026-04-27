@@ -382,6 +382,25 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
     font-weight: normal !important;
     padding: 0 !important;
 }
+
+/* 場所列テンプレート：他セルと同一フォント・縦中央（インライン style で 11px 等にしない） */
+.gantt_grid_data .gantt_cell .grid-location-display {
+    font-family: "メイリオ", Meiryo, sans-serif !important;
+    font-size: 13px !important;
+    font-weight: normal !important;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: normal;
+    padding: 0 2px;
+}
 /* グリッド内カスタム追加ボタン */
 .custom_add_btn {
     display: inline-flex;

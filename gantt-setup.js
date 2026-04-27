@@ -4,6 +4,10 @@ gantt.config.date_format = "%Y-%m-%d";
 // 担当者プルダウン用インラインエディタ（複数選択対応）
 const OWNER_OPTIONS_ASSEMBLY   = ['米澤','桂','香西','古賀','長谷川','早川','廣田','宮本','山下','センティル','増田','外注'];
 const OWNER_OPTIONS_ELECTRICAL = ['木村(至)','木村(圭)','守時','外注(電)'];
+const LOCATION_OPTIONS = [
+    'E1-0','E1-1','E1-2','E1-3','E1-4','E1-5','E1-6','E1-7',
+    'E3-0','E3-1','E3-2','E3-3','E3-4','E3-5','E3-6','E3-7'
+];
 // major_item に応じた担当者リストを返す
 function getOwnerOptions(task) {
     return String(task.major_item) === '電装' ? OWNER_OPTIONS_ELECTRICAL : OWNER_OPTIONS_ASSEMBLY;
@@ -42,6 +46,113 @@ function mergeOwnerNames(checkedNames, customInputValue) {
 function _removeOwnerPopup() {
     const p = document.getElementById('owner_multiselect_popup');
     if (p) p.remove();
+}
+
+function _removeLocationPopup() {
+    const p = document.getElementById('location_multiselect_popup');
+    if (p) p.remove();
+}
+
+function _locationOptionIndex(code) {
+    const i = LOCATION_OPTIONS.indexOf(code);
+    return i >= 0 ? i : 9999;
+}
+
+function normalizeSingleLocationCode(value) {
+    const code = String(value || '').trim().toUpperCase();
+    return LOCATION_OPTIONS.includes(code) ? code : '';
+}
+
+/** カンマ等区切りの文字列 → 有効コードのみ重複除去・LOCATION_OPTIONS順にソート */
+function normalizeLocationCodes(raw) {
+    const parts = String(raw || '')
+        .split(/[,、\s]+/)
+        .map(s => s.trim().toUpperCase())
+        .filter(Boolean);
+    const seen = new Set();
+    const out = [];
+    parts.forEach((p) => {
+        const c = normalizeSingleLocationCode(p);
+        if (c && !seen.has(c)) {
+            seen.add(c);
+            out.push(c);
+        }
+    });
+    out.sort((a, b) => _locationOptionIndex(a) - _locationOptionIndex(b));
+    return out;
+}
+
+function formatLocationCodesString(codes) {
+    if (Array.isArray(codes)) return normalizeLocationCodes(codes.join(',')).join(',');
+    return normalizeLocationCodes(codes).join(',');
+}
+
+/** グリッド表示用：同一フロア(E1/E3)内の連続番号は、2件なら「E1-5, 6」、3件以上なら「E1-1～3」。塊の区切りは「、」 */
+function formatLocationCodesGridDisplay(raw) {
+    const codes = normalizeLocationCodes(raw);
+    if (codes.length === 0) return '';
+
+    const byGroup = new Map();
+    codes.forEach((code) => {
+        const parts = code.split('-');
+        if (parts.length !== 2) return;
+        const g = parts[0];
+        const n = Number(parts[1]);
+        if (Number.isNaN(n)) return;
+        if (!byGroup.has(g)) byGroup.set(g, []);
+        byGroup.get(g).push(n);
+    });
+
+    const orderedGroups = [];
+    LOCATION_OPTIONS.forEach((opt) => {
+        const g = opt.split('-')[0];
+        if (byGroup.has(g) && !orderedGroups.includes(g)) orderedGroups.push(g);
+    });
+    byGroup.forEach((_nums, g) => {
+        if (!orderedGroups.includes(g)) orderedGroups.push(g);
+    });
+
+    const segments = [];
+    orderedGroups.forEach((g) => {
+        const nums = byGroup.get(g);
+        if (!nums || nums.length === 0) return;
+        nums.sort((a, b) => a - b);
+        const clusters = [];
+        let start = nums[0];
+        let prev = nums[0];
+        for (let i = 1; i < nums.length; i++) {
+            const n = nums[i];
+            if (n === prev + 1) {
+                prev = n;
+            } else {
+                clusters.push([start, prev]);
+                start = prev = n;
+            }
+        }
+        clusters.push([start, prev]);
+        clusters.forEach(([a, b]) => {
+            if (a === b) segments.push(`${g}-${a}`);
+            else if (b === a + 1) segments.push(`${g}-${a}, ${b}`);
+            else segments.push(`${g}-${a}～${b}`);
+        });
+    });
+
+    return segments.join('、');
+}
+
+function locationCodeFromRow(loc) {
+    return normalizeSingleLocationCode(`${String(loc.area_group || '').trim()}-${String(loc.area_number || '').trim()}`);
+}
+
+function locationCodesToDbRows(taskId, codes) {
+    return codes.map((code) => {
+        const [areaGroup, areaNumber] = code.split('-');
+        return {
+            task_id: taskId,
+            area_group: areaGroup,
+            area_number: String(areaNumber)
+        };
+    });
 }
 
 gantt.config.editor_types.owner_select = {
@@ -172,6 +283,79 @@ gantt.config.editor_types.status_select = {
         var sel = node.querySelector('select');
         if (sel) sel.focus();
     }
+};
+
+// 場所マルチ選択用インラインエディタ（組立モード用）
+gantt.config.editor_types.location_select = {
+    show: function(id, column, config, placeholder) {
+        const task = gantt.getTask(id);
+        const currentValue = formatLocationCodesString(task[column.map_to] || '');
+
+        placeholder.innerHTML = `<input type="text" class="location-ms-input" readonly value="${currentValue || ''}" style="width:100%;height:100%;cursor:default;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:2px solid #222;border-radius:4px;box-sizing:border-box;">`;
+
+        _removeLocationPopup();
+
+        const selectedCodes = normalizeLocationCodes(currentValue);
+
+        const popup = document.createElement('div');
+        popup.id = 'location_multiselect_popup';
+        popup.style.cssText = 'position:fixed;background:#fff;border:1px solid #aaa;border-radius:4px;box-shadow:0 3px 10px rgba(0,0,0,0.25);z-index:99999;padding:4px 0;min-width:120px;max-height:300px;overflow-y:auto;';
+
+        const updateLabel = () => {
+            const checked = Array.from(popup.querySelectorAll('input[type=checkbox]:checked')).map(c => c.value);
+            const merged = formatLocationCodesString(checked);
+            const input = placeholder.querySelector('.location-ms-input');
+            if (input) input.value = merged;
+        };
+
+        LOCATION_OPTIONS.forEach((code) => {
+            const label = document.createElement('label');
+            label.style.cssText = 'display:flex;align-items:center;padding:5px 12px;cursor:pointer;font-size:13px;font-family:メイリオ,Meiryo,sans-serif;white-space:nowrap;user-select:none;';
+            label.innerHTML = `<input type="checkbox" value="${code}" style="margin-right:7px;cursor:pointer;">${code}`;
+            const cb = label.querySelector('input');
+            cb.checked = selectedCodes.includes(code);
+            cb.addEventListener('change', updateLabel);
+            popup.appendChild(label);
+        });
+
+        popup.addEventListener('mousedown', e => {
+            const target = e.target;
+            if (!(target instanceof HTMLInputElement && target.type === 'text')) e.preventDefault();
+        });
+
+        document.body.appendChild(popup);
+
+        const rect = placeholder.getBoundingClientRect();
+        popup.style.left = rect.left + 'px';
+        popup.style.top = (rect.bottom + 2) + 'px';
+    },
+    hide: function() {
+        _removeLocationPopup();
+    },
+    set_value: function(value, id, column, node) {
+        const input = node.querySelector('.location-ms-input');
+        if (input) input.value = formatLocationCodesString(value || '');
+        const popup = document.getElementById('location_multiselect_popup');
+        if (!popup) return;
+        const names = normalizeLocationCodes(value);
+        popup.querySelectorAll('input[type=checkbox]').forEach(cb => {
+            cb.checked = names.includes(cb.value);
+        });
+    },
+    get_value: function(id, column, node) {
+        const popup = document.getElementById('location_multiselect_popup');
+        if (!popup) {
+            return formatLocationCodesString(gantt.getTask(id)[column.map_to] || '');
+        }
+        const checked = Array.from(popup.querySelectorAll('input[type=checkbox]:checked')).map(c => c.value);
+        return formatLocationCodesString(checked);
+    },
+    is_changed: function(value, id, column, node) {
+        return formatLocationCodesString(value || '') !== this.get_value(id, column, node);
+    },
+    is_valid: function() { return true; },
+    save: function() {},
+    focus: function(node) {}
 };
 
 // 開始日インラインエディタ（計画・出張モード用）
@@ -574,6 +758,11 @@ gantt.attachEvent("onAfterTaskUpdate", async function(id, item) {
             console.error("Error updating task:", error);
             alert("タスクの更新に失敗しました。\n" + error.message);
         } else {
+            const locSyncError = await syncTaskLocation(id, item.location_code);
+            if (locSyncError) {
+                console.error("Error syncing task location:", locSyncError);
+                alert("場所の更新に失敗しました。\n" + locSyncError.message);
+            }
             if (isResourceView) updateResourceData();
             // ▼マークの色を即時更新
             requestAnimationFrame(_renderWishDateMarks);
@@ -583,6 +772,23 @@ gantt.attachEvent("onAfterTaskUpdate", async function(id, item) {
         alert("タスク更新中に予期せぬエラーが発生しました。");
     }
 });
+
+async function syncTaskLocation(taskId, locationCodeRaw) {
+    const codes = normalizeLocationCodes(locationCodeRaw);
+    const { error: deleteError } = await supabaseClient
+        .from('task_locations')
+        .delete()
+        .eq('task_id', taskId);
+    if (deleteError) return deleteError;
+
+    if (codes.length === 0) return null;
+
+    const rows = locationCodesToDbRows(taskId, codes);
+    const { error: insertError } = await supabaseClient
+        .from('task_locations')
+        .insert(rows);
+    return insertError || null;
+}
 
 // ドラッグ（移動・リサイズ）後にSupabaseへ保存
 gantt.attachEvent("onAfterTaskDrag", async function(id, mode, e) {
@@ -657,6 +863,10 @@ function _getLightboxSections(taskType) {
             sections.push({ name: "status", height: 30, map_to: "status", type: "status_select_lb" });
             return;
         }
+        if (key === 'location_code') {
+            sections.push({ name: "location_code", height: 30, map_to: "location_code", type: "location_select_lb" });
+            return;
+        }
         if (key === 'start_date' || key === 'end_date' || key === 'duration') {
             if (!hasDateRange && taskType !== 'long_lead_item') {
                 sections.push({ name: "date_range", height: 30, map_to: "start_date", type: "date_range" });
@@ -698,6 +908,7 @@ gantt.locale.labels.section_project_details  = "工事名";
 gantt.locale.labels.section_wish_date_lb     = "出図希望日 / 手配期日";
 gantt.locale.labels.section_notes            = "備考";
 gantt.locale.labels.section_status           = "状態";
+gantt.locale.labels.section_location_code    = "場所";
 
 // カスタムテンプレート（input type="date"）
 // 全幅テキストエリア（組立図面名・品名など）
@@ -824,6 +1035,90 @@ gantt.form_blocks["status_select_lb"] = {
     },
     focus: function(node) {
         node.querySelector("select").focus();
+    }
+};
+
+gantt.form_blocks["location_select_lb"] = {
+    render: function() {
+        return `<div class='gantt_cal_ltext location-lb-wrap' style='position:relative;'>
+            <div class='location-lb-display' tabindex="0" style='width:100%;height:30px;border:1px solid #ccc;border-radius:4px;padding:0 28px 0 8px;box-sizing:border-box;display:flex;align-items:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer;background:#fff;position:relative;'>
+                -- 未選択 --
+                <span style='position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;color:#666;'>▼</span>
+            </div>
+        </div>`;
+    },
+    set_value: function(node, value, task, sns) {
+        if (node._locationLbBodyPopup) {
+            node._locationLbBodyPopup.remove();
+            node._locationLbBodyPopup = null;
+        }
+        if (node._locationLbOutsideClickHandler) {
+            document.removeEventListener('click', node._locationLbOutsideClickHandler, true);
+            node._locationLbOutsideClickHandler = null;
+        }
+
+        const display = node.querySelector('.location-lb-display');
+        const selectedCodes = normalizeLocationCodes(value || '');
+
+        const popup = document.createElement('div');
+        popup.className = 'location-lb-popup-global';
+        popup.style.cssText = 'display:none;position:fixed;z-index:99999;min-width:160px;max-height:260px;overflow-y:auto;background:#fff;border:1px solid #aaa;border-radius:4px;box-shadow:0 3px 10px rgba(0,0,0,0.25);padding:4px 0;';
+        popup.innerHTML = LOCATION_OPTIONS.map(code => `
+            <label style="display:flex;align-items:center;padding:5px 10px;cursor:pointer;font-size:13px;font-family:'メイリオ',Meiryo,sans-serif;white-space:nowrap;">
+                <input type="checkbox" value="${code}" ${selectedCodes.includes(code) ? 'checked' : ''} style="margin-right:7px;cursor:pointer;">
+                ${code}
+            </label>
+        `).join('');
+        document.body.appendChild(popup);
+        node._locationLbBodyPopup = popup;
+
+        const updateDisplay = () => {
+            const checked = Array.from(popup.querySelectorAll('input[type=checkbox]:checked')).map(cb => cb.value);
+            const merged = formatLocationCodesString(checked);
+            display.firstChild.textContent = merged.length ? merged.replace(/,/g, ', ') : '-- 未選択 --';
+        };
+        updateDisplay();
+
+        popup.querySelectorAll('input[type=checkbox]').forEach(cb => {
+            cb.addEventListener('change', updateDisplay);
+        });
+
+        const togglePopup = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (popup.style.display === 'none') {
+                const rect = display.getBoundingClientRect();
+                popup.style.left = rect.left + 'px';
+                popup.style.top = (rect.bottom + 2) + 'px';
+                popup.style.display = 'block';
+            } else {
+                popup.style.display = 'none';
+            }
+        };
+        display.onclick = togglePopup;
+        display.onkeydown = (e) => {
+            if (e.key === 'Enter' || e.key === ' ') togglePopup(e);
+            if (e.key === 'Escape') popup.style.display = 'none';
+        };
+
+        popup.onclick = (e) => e.stopPropagation();
+        popup.onmousedown = (e) => e.stopPropagation();
+
+        const outsideClickHandler = (e) => {
+            if (!node.contains(e.target) && !popup.contains(e.target)) popup.style.display = 'none';
+        };
+        document.addEventListener('click', outsideClickHandler, true);
+        node._locationLbOutsideClickHandler = outsideClickHandler;
+    },
+    get_value: function(node, task, sns) {
+        const popup = node._locationLbBodyPopup;
+        if (!popup) return '';
+        const checked = Array.from(popup.querySelectorAll('input[type=checkbox]:checked')).map(cb => cb.value);
+        return formatLocationCodesString(checked);
+    },
+    focus: function(node) {
+        const display = node.querySelector('.location-lb-display');
+        if (display) display.focus();
     }
 };
 
@@ -973,6 +1268,7 @@ gantt.attachEvent("onBeforeLightbox", function(id) {
 // ライトボックスを閉じた時の後処理
 gantt.attachEvent("onAfterLightbox", function() {
     document.querySelectorAll('.owner-lb-popup-global').forEach(el => el.remove());
+    document.querySelectorAll('.location-lb-popup-global').forEach(el => el.remove());
     return true;
 });
 
@@ -1015,6 +1311,15 @@ function _getDrawingColumns() {
         { name: "text",            label: "タスク",     width: 120, tree: true, align: "left",   editor: { type: "text", map_to: "text" } },
         { name: "notes",           label: "備考",       width: 100, align: "left",   editor: { type: "text", map_to: "notes" } },
         { name: "owner",           label: "担当",       width: 80,  align: "center", editor: { type: "owner_select", map_to: "owner" } },
+        { name: "location_code",   label: "場所",       width: 72,  align: "center",
+          template: function(task) {
+              const s = formatLocationCodesString(task.location_code || '');
+              if (!s) return '';
+              const display = formatLocationCodesGridDisplay(task.location_code || '');
+              const titleText = s.replace(/,/g, ', ');
+              return `<span class="grid-location-display" title="${titleText}">${display}</span>`;
+          },
+          editor: { type: "location_select", map_to: "location_code" } },
         { name: "start_date",      label: "開始",       width: 65,  align: "center",
           template: function(task) {
             if (!task.start_date) return "";
@@ -1091,6 +1396,15 @@ function _getPlanningColumns() {
         { name: "text",            label: "タスク",   width: 150, tree: true, align: "left",   editor: { type: "text", map_to: "text" } },
         { name: "notes",           label: "備考",     width: 100, align: "left",   editor: { type: "text", map_to: "notes" } },
         { name: "owner",           label: "担当",     width: 40,  align: "center", editor: { type: "owner_select", map_to: "owner" } },
+        { name: "location_code",   label: "場所",     width: 72,  align: "center",
+          template: function(task) {
+              const s = formatLocationCodesString(task.location_code || '');
+              if (!s) return '';
+              const display = formatLocationCodesGridDisplay(task.location_code || '');
+              const titleText = s.replace(/,/g, ', ');
+              return `<span class="grid-location-display" title="${titleText}">${display}</span>`;
+          },
+          editor: { type: "location_select", map_to: "location_code" } },
         { name: "start_date",      label: "開始",     width: 65,  align: "center",
           template: function(task) {
             if (!task.start_date) return "";
@@ -1301,6 +1615,28 @@ async function loadData() {
         !completedProjectNums.has(String(t.project_number || '').trim())
     );
 
+    // task_locations の先頭レコードを場所コードとしてタスクに反映（グリッド表示・編集用）
+    const locData = locationsResult.data || [];
+    const locByTask = new Map();
+    locData.forEach((loc) => {
+        if (!loc || loc.task_id == null) return;
+        if (!locByTask.has(loc.task_id)) locByTask.set(loc.task_id, []);
+        locByTask.get(loc.task_id).push(loc);
+    });
+    activeTasks.forEach((task) => {
+        const locs = locByTask.get(task.id) || [];
+        if (locs.length === 0) {
+            task.location_code = '';
+            return;
+        }
+        const codesFromDb = [];
+        locs.forEach((loc) => {
+            const c = locationCodeFromRow(loc);
+            if (c) codesFromDb.push(c);
+        });
+        task.location_code = formatLocationCodesString(codesFromDb);
+    });
+
     // データ更新時は選択をリセット
     _gridSelection.clear();
     _lastGridClickId = null;
@@ -1311,7 +1647,6 @@ async function loadData() {
     });
 
     // task_locations データを構築
-    const locData = locationsResult.data;
     if (locData) {
         const taskMap = new Map(activeTasks.map(t => [t.id, t]));
         taskLocationsData = locData
