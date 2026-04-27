@@ -638,9 +638,10 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
     display: none !important;
 }
 
-/* リソース担当者名リンク */
+/* リソース担当者名リンク（左側に配置、テキスト左揃え・長い場合は省略） */
 .resource-owner-link {
-    width: 120px;
+    font-size: 12px;
+    max-width: 140px;
     text-align: left;
     cursor: pointer;
     color: #333;
