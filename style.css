@@ -143,10 +143,11 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
 /* リソースカレンダーヘッダー */
 #resource_calendar_header {
     flex-shrink: 0;
-    overflow: hidden;
+    overflow: visible;
     background: #546e7a;
     border-bottom: 1px solid #607d8b;
     font-family: "メイリオ", Meiryo, sans-serif;
+    min-height: 40px;
 }
 #resource_calendar_header .cal-row {
     display: flex;
