@@ -1820,6 +1820,7 @@ function ownerFilterAllChanged(checkbox) {
     currentOwnerFilter = [];
     gantt.render();
     _updateOwnerFilterBtn();
+    _refreshCalendarHeader();
 }
 
 function ownerFilterItemChanged() {
@@ -1830,6 +1831,7 @@ function ownerFilterItemChanged() {
     if (allChk) allChk.checked = selected.length === 0;
     gantt.render();
     _updateOwnerFilterBtn();
+    _refreshCalendarHeader();
 }
 
 function _updateOwnerFilterBtn() {
