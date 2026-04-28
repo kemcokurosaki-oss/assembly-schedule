@@ -1313,6 +1313,10 @@ gantt.attachEvent("onLightboxSave", function(id, task, is_new){
         task.start_date = gantt.date.add(task.end_date, -duration, "day");
     }
 
+    if (_pendingNewTaskLightboxId != null && String(_pendingNewTaskLightboxId) === String(id)) {
+        _postLightboxInsertTaskId = id;
+    }
+
     return true;
 });
 
