@@ -1740,6 +1740,10 @@ function _isHoliday(date) {
 let currentOwnerFilter = [];      // 空配列 = 全担当者
 let currentTaskNameFilter = [];   // 空配列 = 全タスク名
 let _clearingEndDateId = null;   // 完了予定日クリア中のタスクID
+let _pendingNewTaskLightboxId = null;
+let _postLightboxInsertTaskId = null;
+let _finalizePendingInsertInProgress = false;
+let _suppressTaskDeleteId = null;
 let isResourceFullscreen = false;
 
 function _initOwnerFilterDropdown() {
