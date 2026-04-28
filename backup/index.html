@@ -347,6 +347,11 @@
             line-height: 1;
             cursor: pointer;
             user-select: none;
+            /* 組立工程表では常に非表示（描画されても見せない保険） */
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
         }
         .wish-date-mark.dragging { opacity: 0.6; }
 

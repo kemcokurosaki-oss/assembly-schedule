@@ -369,6 +369,11 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
     line-height: 1;
     cursor: pointer;
     user-select: none;
+    /* 念のため描画されても常に非表示 */
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 .wish-date-mark.dragging { opacity: 0.6; }
 
