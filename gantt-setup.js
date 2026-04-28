@@ -583,12 +583,15 @@ async function deleteSelectedTasks() {
     document.getElementById('multi_delete_btn').style.display = 'none';
 }
 
-// 新規タスク追加
-// gantt.createTask() を使わず Supabase に直接保存して loadData() でリフレッシュする
+// 新規タスク追加：まずライトボックスで入力 → 保存で Supabase に挿入
 // afterTaskId: グリッドの+ボタンから呼ばれた場合は対象行のID、ヘッダーボタンから呼ばれた場合は undefined
-async function createTask(afterTaskId) {
+function createTask(afterTaskId) {
     if (currentProjectFilter.length !== 1) {
         alert("工事番号を選択してからタスクを追加してください。");
+        return;
+    }
+    if (_pendingNewTaskLightboxId != null) {
+        alert("新規追加の編集画面が開いています。先に保存またはキャンセルしてください。");
         return;
     }
     const projectNumber = currentProjectFilter[0];
@@ -615,15 +618,12 @@ async function createTask(afterTaskId) {
         return sa - sb;
     });
 
-    // sort_order と machine の決定
-    // sort_order が null の行は id * 1000 を仮想値として使用（整数列でも小数にならないよう大きな間隔を確保）
     const _getSO = t => (t.sort_order != null) ? t.sort_order : t.id * 1000;
 
     let newSortOrder;
     let inheritMachine = "";
 
     if (afterTaskId != null) {
-        // グリッドの+ボタン：クリックした行の1行下に挿入
         const afterIdx = visibleTasks.findIndex(t => String(t.id) === String(afterTaskId));
         if (afterIdx >= 0) {
             const afterTask = visibleTasks[afterIdx];
@@ -635,70 +635,129 @@ async function createTask(afterTaskId) {
                 newSortOrder = _getSO(afterTask) + 1000;
             }
         } else {
-            // 見つからない場合は末尾
             newSortOrder = visibleTasks.length > 0 ? (_getSO(visibleTasks[visibleTasks.length - 1]) + 1000) : 1000;
             inheritMachine = visibleTasks.length > 0 ? (visibleTasks[visibleTasks.length - 1].machine || "") : "";
         }
     } else {
-        // ヘッダーの「新規タスク追加」ボタン：末尾に追加
         newSortOrder = visibleTasks.length > 0 ? (_getSO(visibleTasks[visibleTasks.length - 1]) + 1000) : 1000;
         inheritMachine = visibleTasks.length > 0 ? (visibleTasks[visibleTasks.length - 1].machine || "") : "";
     }
 
     const today = new Date();
-    // 完了予定日=今日、期間=2週間（14日）のデフォルト設定
     const startDate = new Date(today);
-    startDate.setDate(startDate.getDate() - 13); // 13日前から開始 → 完了日=今日で14日間
+    startDate.setDate(startDate.getDate() - 13);
+    const taskType = currentTaskTypeFilter || null;
 
-    const { data, error } = await supabaseClient
-        .from('tasks')
-        .insert([{
-            text: "",
-            start_date: _toDateStr(startDate),
-            end_date: _toDateStr(today), // 完了日=今日（loadData時に+1日してgantの排他的終了日にする）
-            project_number: projectNumber,
-            machine: inheritMachine,
-            unit: "",
-            unit2: "",
-            model_type: "",
-            part_number: "",
-            quantity: 0,
-            manufacturer: "",
-            status: "",
-            customer_name: "",
-            project_details: "",
-            characteristic: "",
-            derivation: "",
-            owner: "",
-            total_sheets: 0,
-            completed_sheets: 0,
-            task_type: currentTaskTypeFilter || null,
-            is_business_trip: currentTaskTypeFilter === 'business_trip',
-            wish_date: _toDateStr(today),
-            is_detailed: false,
-            major_item: '組立',
-            sort_order: newSortOrder
-        }])
-        .select();
+    const newId = gantt.uid();
+    _pendingNewTaskLightboxId = newId;
 
-    if (error) {
-        console.error("Error adding task:", error);
-        alert("タスクの追加に失敗しました。\n" + error.message);
+    gantt.addTask({
+        id: newId,
+        $new: true,
+        text: "",
+        start_date: startDate,
+        end_date: gantt.date.add(today, 1, 'day'),
+        project_number: projectNumber,
+        machine: inheritMachine,
+        unit: "",
+        unit2: "",
+        model_type: "",
+        part_number: "",
+        quantity: 0,
+        manufacturer: "",
+        status: "",
+        customer_name: "",
+        project_details: "",
+        characteristic: "",
+        derivation: "",
+        owner: "",
+        total_sheets: 0,
+        completed_sheets: 0,
+        task_type: taskType,
+        is_business_trip: taskType === 'business_trip',
+        wish_date: _toDateStr(today),
+        is_detailed: false,
+        major_item: '組立',
+        sort_order: newSortOrder,
+        has_no_date: false
+    });
+
+    gantt.showLightbox(newId);
+}
+
+async function _finalizePendingNewTaskToDb(id) {
+    if (_finalizePendingInsertInProgress) return;
+    if (_pendingNewTaskLightboxId == null || String(_pendingNewTaskLightboxId) !== String(id)) return;
+    if (!gantt.isTaskExists(id)) {
+        _pendingNewTaskLightboxId = null;
         return;
     }
 
-    // データ再読み込みしてからインライン編集を起動
-    await loadData();
+    _finalizePendingInsertInProgress = true;
+    try {
+        const item = gantt.getTask(id);
+        const endDateStr = item.has_no_date
+            ? null
+            : _toDateStr(gantt.date.add(new Date(item.end_date), -1, "day"));
 
-    if (data && data[0]) {
-        const newId = data[0].id;
-        gantt.showTask(newId);
-        const editCol = gantt.config.columns.find(c => c.name === "text");
-        if (editCol && editCol.editor) {
-            setTimeout(() => {
-                gantt.ext.inlineEditors.startEdit(newId, "text");
-            }, 100);
+        const { data, error } = await supabaseClient
+            .from('tasks')
+            .insert([{
+                text: item.text || "",
+                start_date: _toDateStr(item.start_date),
+                end_date: endDateStr,
+                project_number: item.project_number,
+                machine: item.machine || "",
+                unit: item.unit || "",
+                unit2: item.unit2 || "",
+                model_type: item.model_type || "",
+                part_number: item.part_number || "",
+                quantity: Number(item.quantity) || 0,
+                manufacturer: item.manufacturer || "",
+                status: item.status || "",
+                customer_name: item.customer_name || "",
+                project_details: item.project_details || "",
+                characteristic: item.characteristic || "",
+                derivation: item.derivation || "",
+                owner: item.owner || "",
+                total_sheets: Number(item.total_sheets) || 0,
+                completed_sheets: Number(item.completed_sheets) || 0,
+                task_type: item.task_type || currentTaskTypeFilter || null,
+                is_business_trip: (item.task_type || currentTaskTypeFilter) === 'business_trip',
+                wish_date: item.wish_date || null,
+                is_detailed: false,
+                major_item: '組立',
+                sort_order: item.sort_order,
+                hyphen: item.hyphen ?? null
+            }])
+            .select();
+
+        if (error) {
+            console.error("Error adding task:", error);
+            alert("タスクの追加に失敗しました。\n" + error.message);
+            _pendingNewTaskLightboxId = null;
+            _suppressTaskDeleteId = id;
+            if (gantt.isTaskExists(id)) gantt.deleteTask(id);
+            _suppressTaskDeleteId = null;
+            return;
         }
+
+        _pendingNewTaskLightboxId = null;
+        _suppressTaskDeleteId = id;
+        if (gantt.isTaskExists(id)) gantt.deleteTask(id);
+        _suppressTaskDeleteId = null;
+
+        await loadData();
+
+        if (data && data[0]) {
+            gantt.showTask(data[0].id);
+        }
+    } catch (e) {
+        console.error("Exception in _finalizePendingNewTaskToDb:", e);
+        alert("タスク追加処理中にエラーが発生しました。");
+        _pendingNewTaskLightboxId = null;
+    } finally {
+        _finalizePendingInsertInProgress = false;
     }
 }
 
