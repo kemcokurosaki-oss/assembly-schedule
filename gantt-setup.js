@@ -906,7 +906,6 @@ gantt.locale.labels.section_manufacturer            = "メーカー";
 gantt.locale.labels.section_customer_name    = "客先";
 gantt.locale.labels.section_project_details  = "工事名";
 gantt.locale.labels.section_wish_date_lb     = "出図希望日 / 手配期日";
-gantt.locale.labels.section_notes            = "備考";
 gantt.locale.labels.section_status           = "状態";
 gantt.locale.labels.section_location_code    = "場所";
 
@@ -1309,7 +1308,6 @@ function _getDrawingColumns() {
         { name: "machine",         label: "機械",       width: 40,  align: "center", editor: { type: "text", map_to: "machine" } },
         { name: "unit",            label: "ユニ",       width: 40,  align: "center", editor: { type: "text", map_to: "unit" } },
         { name: "text",            label: "タスク",     width: 120, tree: true, align: "left",   editor: { type: "text", map_to: "text" } },
-        { name: "notes",           label: "備考",       width: 100, align: "left",   editor: { type: "text", map_to: "notes" } },
         { name: "owner",           label: "担当",       width: 80,  align: "center", editor: { type: "owner_select", map_to: "owner" } },
         { name: "location_code",   label: "場所",       width: 72,  align: "center",
           template: function(task) {
@@ -1394,7 +1392,6 @@ function _getPlanningColumns() {
         { name: "machine",         label: "機械",     width: 40,  align: "center", editor: { type: "text", map_to: "machine" } },
         { name: "unit",            label: "ユニ",     width: 40,  align: "center", editor: { type: "text", map_to: "unit" } },
         { name: "text",            label: "タスク",   width: 150, tree: true, align: "left",   editor: { type: "text", map_to: "text" } },
-        { name: "notes",           label: "備考",     width: 100, align: "left",   editor: { type: "text", map_to: "notes" } },
         { name: "owner",           label: "担当",     width: 40,  align: "center", editor: { type: "owner_select", map_to: "owner" } },
         { name: "location_code",   label: "場所",     width: 72,  align: "center",
           template: function(task) {
