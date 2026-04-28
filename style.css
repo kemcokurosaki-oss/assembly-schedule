@@ -470,6 +470,17 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
     display: none !important;
 }
 
+/* 組立・出張モードのタスク列（ツリー列）を中央揃え */
+#gantt_here.col-text-center .gantt_cell_tree {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+#gantt_here.col-text-center .gantt_cell_tree .gantt_tree_content {
+    flex: none;
+    text-align: center;
+}
+
 /* タスクの背景色を水色とさらに薄い水色で交互にする */
 .gantt_row {
     background-color: #f8fafc !important; /* 非常に明るいグレーブルー */
