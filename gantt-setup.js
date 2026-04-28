@@ -770,10 +770,8 @@ gantt.attachEvent("onBeforeTaskUpdate", function(id, task) {
     return true;
 });
 
-// Supabase への保存処理（バーのドラッグ等、gantt内部でタスクが追加された場合の安全網）
 gantt.attachEvent("onAfterTaskAdd", async function(id, item) {
-    // createTask() からは呼ばれない（直接Supabase保存のため）
-    // ライトボックス経由の追加など他の経路で使われる場合のみ動作
+    // createTask() の仮行追加は _pendingNewTaskLightboxId で管理するため、ここでは何もしない
 });
 
 gantt.attachEvent("onAfterTaskUpdate", async function(id, item) {
