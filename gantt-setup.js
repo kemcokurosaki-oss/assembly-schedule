@@ -1379,6 +1379,8 @@ gantt.attachEvent("onLightboxSave", function(id, task, is_new){
 // ライトボックス表示前の処理（担当別モード時は非表示）
 gantt.attachEvent("onBeforeLightbox", function(id) {
     if (isResourceFullscreen) return false;
+    const task = gantt.isTaskExists(id) ? gantt.getTask(id) : null;
+    _currentLbMajorItem = (task && task.major_item === '電装') ? '電装' : '組立';
     const taskType = currentTaskTypeFilter || 'assembly';
     gantt.config.lightbox.sections = _getLightboxSections(taskType);
 
