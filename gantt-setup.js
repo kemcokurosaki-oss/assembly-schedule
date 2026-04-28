@@ -2,7 +2,7 @@
 gantt.config.date_format = "%Y-%m-%d";
 
 // 担当者プルダウン用インラインエディタ（複数選択対応）
-const OWNER_OPTIONS_ASSEMBLY   = ['米澤','桂','香西','古賀','長谷川','早川','廣田','宮本','山下','センティル','増田','外注'];
+const OWNER_OPTIONS_ASSEMBLY   = ['米澤','桂','香西','古賀','長谷川','早川','廣田','宮本','山下','センティル','外注'];
 const OWNER_OPTIONS_ELECTRICAL = ['木村(至)','木村(圭)','守時','外注(電)'];
 const LOCATION_OPTIONS = [
     'E1-0','E1-1','E1-2','E1-3','E1-4','E1-5','E1-6','E1-7',
