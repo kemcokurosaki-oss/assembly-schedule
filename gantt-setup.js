@@ -1338,6 +1338,26 @@ gantt.attachEvent("onBeforeLightbox", function(id) {
 gantt.attachEvent("onAfterLightbox", function() {
     document.querySelectorAll('.owner-lb-popup-global').forEach(el => el.remove());
     document.querySelectorAll('.location-lb-popup-global').forEach(el => el.remove());
+    const insertId = _postLightboxInsertTaskId;
+    _postLightboxInsertTaskId = null;
+    if (insertId != null) {
+        setTimeout(function() {
+            _finalizePendingNewTaskToDb(insertId);
+        }, 0);
+    }
+    return true;
+});
+
+gantt.attachEvent("onLightboxCancel", function(id) {
+    if (_postLightboxInsertTaskId != null && String(_postLightboxInsertTaskId) === String(id)) {
+        _postLightboxInsertTaskId = null;
+    }
+    if (_pendingNewTaskLightboxId != null && String(_pendingNewTaskLightboxId) === String(id)) {
+        _pendingNewTaskLightboxId = null;
+        _suppressTaskDeleteId = id;
+        if (gantt.isTaskExists(id)) gantt.deleteTask(id);
+        _suppressTaskDeleteId = null;
+    }
     return true;
 });
 
