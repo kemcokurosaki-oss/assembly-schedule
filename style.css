@@ -357,6 +357,21 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
 .gantt_task_line { border-radius: 4px; }
 .gantt_task_content { font-size: 11px; font-family: "メイリオ", Meiryo, sans-serif; }
 
+/* タスクバー左右のリンク点(○)・リサイズハンドルを非表示 */
+#gantt_here .gantt_link_control,
+#gantt_here .gantt_link_point,
+#gantt_here .gantt_link_control .gantt_link_point,
+#gantt_here .gantt_task_line .gantt_link_control,
+#gantt_here .gantt_task_line .gantt_task_drag,
+#gantt_here .gantt_task_line .gantt_task_drag.task_left,
+#gantt_here .gantt_task_line .gantt_task_drag.task_right,
+#gantt_here .gantt_task_line .gantt_task_progress_drag {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
 /* wish_date ▼マーク */
 .wish-date-mark {
     position: absolute;
