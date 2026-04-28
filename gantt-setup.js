@@ -994,6 +994,60 @@ gantt.form_blocks["textarea_full"] = {
     }
 };
 
+// 部署ドロップダウン（ライトボックス用）
+let _currentLbMajorItem = '組立';
+
+function _refreshOwnerLbPopup() {
+    const ownerNode = document.querySelector('.owner-lb-wrap');
+    if (!ownerNode) return;
+
+    // 現在の選択値を保持してポップアップを破棄
+    let currentValue = '';
+    const popup = ownerNode._ownerLbBodyPopup;
+    if (popup) {
+        const checked = Array.from(popup.querySelectorAll('input[type=checkbox]:checked')).map(cb => cb.value);
+        const freeInput = popup.querySelector('.owner-lb-free-input');
+        currentValue = mergeOwnerNames(checked, freeInput ? freeInput.value : '').join(',');
+        popup.remove();
+        ownerNode._ownerLbBodyPopup = null;
+        if (ownerNode._ownerLbOutsideClickHandler) {
+            document.removeEventListener('click', ownerNode._ownerLbOutsideClickHandler, true);
+            ownerNode._ownerLbOutsideClickHandler = null;
+        }
+    }
+
+    // 新しい部署オプションでオーナーを再初期化
+    gantt.form_blocks["owner_select_lb"].set_value(
+        ownerNode, currentValue, { major_item: _currentLbMajorItem }, {}
+    );
+}
+
+gantt.form_blocks["busho_select_lb"] = {
+    render: function(sns) {
+        return `<div class='gantt_cal_ltext'>
+            <select style='width:100%;height:30px;border:1px solid #ccc;border-radius:4px;padding:0 5px;font-size:12px;font-family:"メイリオ",Meiryo,sans-serif;box-sizing:border-box;'>
+                <option value="組立">組立</option>
+                <option value="電装">電装</option>
+            </select>
+        </div>`;
+    },
+    set_value: function(node, value, task, sns) {
+        const select = node.querySelector('select');
+        const dept = (value === '電装') ? '電装' : '組立';
+        select.value = dept;
+        _currentLbMajorItem = dept;
+        select.onchange = function() {
+            _currentLbMajorItem = this.value;
+            _refreshOwnerLbPopup();
+        };
+    },
+    get_value: function(node, task, sns) {
+        const select = node.querySelector('select');
+        return select ? select.value : '組立';
+    },
+    focus: function(node) {}
+};
+
 // 担当プルダウン（ライトボックス用）
 gantt.form_blocks["owner_select_lb"] = {
     render: function(sns) {
