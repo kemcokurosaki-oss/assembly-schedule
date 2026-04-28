@@ -960,6 +960,7 @@ gantt.locale.labels.section_model_type       = "機種";
 gantt.locale.labels.section_unit2            = "ユニット2";
 gantt.locale.labels.section_characteristic   = "特性";
 gantt.locale.labels.section_derivation       = "派生";
+gantt.locale.labels.section_major_item       = "部署";
 gantt.locale.labels.section_owner            = "担当";
 gantt.locale.labels.section_total_sheets     = "総枚数";
 gantt.locale.labels.section_completed_sheets = "完了枚数";
