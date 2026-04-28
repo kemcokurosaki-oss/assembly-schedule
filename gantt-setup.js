@@ -1798,6 +1798,43 @@ function projectFilterItemChanged() {
     _refreshCalendarHeader();
 }
 
+// 新規工事番号をプルダウンに追加して選択状態にする
+function addNewProjectFilter() {
+    const input = document.getElementById('new_project_input');
+    const val = (input?.value || '').trim();
+    if (!val) {
+        alert('工事番号を入力してください。');
+        return;
+    }
+
+    const list = document.getElementById('project_chk_list');
+    if (!list) return;
+
+    // 既存チェックをすべて外す
+    document.querySelectorAll('.project-chk-item').forEach(chk => { chk.checked = false; });
+    const allChk = document.getElementById('project_chk_all');
+    if (allChk) allChk.checked = false;
+
+    // 既存リストに同じ番号があればそれを選択、なければ先頭に追加
+    const escaped = (window.CSS && typeof window.CSS.escape === 'function') ? window.CSS.escape(val) : val.replace(/["\\]/g, '\\$&');
+    let existing = list.querySelector(`.project-chk-item[value="${escaped}"]`);
+    if (!existing) {
+        const label = document.createElement('label');
+        label.style.cssText = 'display:block; padding:4px 10px; cursor:pointer; white-space:nowrap; font-size:13px; font-family:\'メイリオ\',Meiryo,sans-serif;';
+        label.innerHTML = `<input type="checkbox" class="project-chk-item" value="${val}" onchange="projectFilterItemChanged()"> ${val}`;
+        list.prepend(label);
+        existing = label.querySelector('.project-chk-item');
+    }
+
+    if (existing) existing.checked = true;
+    input.value = '';
+    projectFilterItemChanged();
+
+    // ドロップダウンを閉じる
+    const dd = document.getElementById('project_filter_dropdown');
+    if (dd) dd.style.display = 'none';
+}
+
 function _updateProjectFilterBtn() {
     const btn = document.getElementById('project_filter_btn');
     if (!btn) return;

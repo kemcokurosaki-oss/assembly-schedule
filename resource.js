@@ -691,6 +691,16 @@ function _enterResourceFullscreen() {
     btn.style.display = "none";
     document.getElementById("resource_close_btn").style.display = "none";
     document.querySelector(".resource-header-bar").style.display = "none";
+    // リソースズームバーを表示して現在のズームレベルを同期
+    const rZoomBar = document.getElementById('resource_zoom_bar');
+    if (rZoomBar) {
+        const lvl = gantt.getState ? (gantt.getState().scale_unit || 'day') : 'day';
+        rZoomBar.style.display = 'flex';
+        const rdBtn = document.getElementById('resource_zoom_day_btn');
+        const rwBtn = document.getElementById('resource_zoom_week_btn');
+        if (rdBtn) rdBtn.classList.toggle('active', lvl === 'day');
+        if (rwBtn) rwBtn.classList.toggle('active', lvl === 'week');
+    }
     updateFilterButtons();
     // レイアウト確定後にスクロール位置を設定
     setTimeout(() => {
@@ -715,6 +725,16 @@ function _exitResourceFullscreen() {
     btn.style.display = ""; // リソースボタンを復元
     btn.innerText = "リソース表示";
     document.getElementById("resource_close_btn").style.display = "";
+    // リソースズームバーを非表示にしてメインのズームボタンを復元
+    const rZoomBarExit = document.getElementById('resource_zoom_bar');
+    if (rZoomBarExit) {
+        const lvl = gantt.getState ? (gantt.getState().scale_unit || 'day') : 'day';
+        rZoomBarExit.style.display = 'none';
+        const dBtn = document.getElementById('zoom_day_btn');
+        const wBtn = document.getElementById('zoom_week_btn');
+        if (dBtn) dBtn.classList.toggle('active', lvl === 'day');
+        if (wBtn) wBtn.classList.toggle('active', lvl === 'week');
+    }
     // 個別に設定された非表示状態をリセットしてから updateFilterButtons に任せる
     ['project_filter_wrap', 'task_name_filter_wrap', 'create_task_btn'].forEach(id => {
         const el = document.getElementById(id);
