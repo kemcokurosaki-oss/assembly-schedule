@@ -427,6 +427,18 @@
             width: 0 !important;
             display: none !important;
         }
+        /* 組立/出張モードの tree 列（タスク）を確実に中央揃え */
+        #gantt_here.task-text-centered .gantt_grid_data .gantt_cell_tree {
+            text-align: center !important;
+        }
+        #gantt_here.task-text-centered .gantt_grid_data .gantt_cell_tree .gantt_tree_content {
+            display: flex !important;
+            width: 100% !important;
+            justify-content: center !important;
+            text-align: center !important;
+            padding-left: 0 !important;
+            margin-left: 0 !important;
+        }
 
         /* タスクの背景色を水色とさらに薄い水色で交互にする */
         .gantt_row {
@@ -2603,7 +2615,9 @@ gantt.locale.labels.section_project_number   = "工事番号";
                 { name: "project_number",   label: "工事<br>番号",   width: 35, align: "center", editor: { type: "text",   map_to: "project_number" } },
                 { name: "machine",          label: "機械",           width: 40, align: "center", editor: { type: "text",   map_to: "machine" } },
                 { name: "unit",             label: "ユニ",           width: 40, align: "center", editor: { type: "text",   map_to: "unit" } },
-                { name: "text",             label: "組立図面名",     width: 135, tree: true,      editor: { type: "text",   map_to: "text" } },
+                { name: "text",             label: "組立図面名",     width: 135, align: "center",
+                  template: (task) => `<div style="width:100%;text-align:center;">${gantt.templates.html_escape(task.text || "")}</div>`,
+                  editor: { type: "text",   map_to: "text" } },
                 { name: "model_type",       label: "機種",           width: 30, align: "center", editor: { type: "text",   map_to: "model_type" } },
                 { name: "unit2",            label: "ユニ<br>2",      width: 30, align: "center", editor: { type: "text",   map_to: "unit2" } },
                 { name: "dash",             label: "-",              width: 25, align: "center", template: (task) => task.hyphen ?? "-", editor: { type: "text", map_to: "hyphen" } },
@@ -2652,7 +2666,9 @@ gantt.locale.labels.section_project_number   = "工事番号";
                 { name: "project_number",  label: "工事番号", width: 60,  align: "center", editor: { type: "text", map_to: "project_number" } },
                 { name: "machine",         label: "機械",     width: 40,  align: "center", editor: { type: "text", map_to: "machine" } },
                 { name: "unit",            label: "ユニ",     width: 40,  align: "center", editor: { type: "text", map_to: "unit" } },
-                { name: "text",            label: "タスク",   width: 230, tree: true,      editor: { type: "text", map_to: "text" } },
+                { name: "text",            label: "タスク",   width: 230, align: "center",
+                  template: (task) => `<div style="width:100%;text-align:center;">${gantt.templates.html_escape(task.text || "")}</div>`,
+                  editor: { type: "text", map_to: "text" } },
                 { name: "owner",           label: "担当",     width: 40,  align: "center", editor: { type: "owner_select", map_to: "owner" } },
                 { name: "start_date",      label: "開始日",   width: 65,  align: "center",
                   template: function(task) {
@@ -2676,6 +2692,11 @@ gantt.locale.labels.section_project_number   = "工事番号";
             if (filterType === 'long_lead_item') cols = _getLongtermColumns();
             else if (filterType === 'business_trip' || filterType === 'planning') cols = _getTripColumns();
             else cols = _getDrawingColumns();
+            const ganttEl = document.getElementById('gantt_here');
+            if (ganttEl) {
+                const centered = (filterType === 'drawing' || filterType === 'business_trip' || filterType === 'planning');
+                ganttEl.classList.toggle('task-text-centered', centered);
+            }
             gantt.config.columns = cols;
             _setLayout(_getColsSum(cols));
             gantt.render();
@@ -3122,6 +3143,7 @@ gantt.locale.labels.section_project_number   = "工事番号";
             _setLayout(_getColsSum(gantt.config.columns));
 
             gantt.init("gantt_here");
+            document.getElementById('gantt_here')?.classList.add('task-text-centered');
 
             // === グリッド操作設定 ===
 
