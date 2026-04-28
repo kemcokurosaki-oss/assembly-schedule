@@ -1592,6 +1592,8 @@
             const dataArea = document.querySelector('#gantt_here .gantt_data_area');
             if (!dataArea) return;
             dataArea.querySelectorAll('.wish-date-mark').forEach(el => el.remove());
+            // 組立工程表では▼マーカー表示は不要（wish_dateデータは保持）
+            return;
 
             const label = currentTaskTypeFilter === 'long_lead_item' ? '手配期日' : '出希望日';
 
