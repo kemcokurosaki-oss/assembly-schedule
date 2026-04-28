@@ -776,6 +776,11 @@ gantt.attachEvent("onAfterTaskAdd", async function(id, item) {
 
 gantt.attachEvent("onAfterTaskUpdate", async function(id, item) {
     try {
+        // 新規（createTask の仮行）の DB 反映は onAfterLightbox 経由の _finalizePendingNewTaskToDb で行う
+        if (_pendingNewTaskLightboxId != null && String(id) === String(_pendingNewTaskLightboxId)) {
+            return;
+        }
+
         // has_no_dateの場合はend_dateをnullで保存、それ以外は-1日して完了日を保存
         const endDateStr = item.has_no_date
             ? null
