@@ -872,6 +872,10 @@ gantt.attachEvent("onAfterTaskDrag", async function(id, mode, e) {
 });
 
 gantt.attachEvent("onAfterTaskDelete", async function(id, item) {
+    if (_suppressTaskDeleteId != null && String(_suppressTaskDeleteId) === String(id)) {
+        _suppressTaskDeleteId = null;
+        return;
+    }
     try {
         const { error } = await supabaseClient
             .from('tasks')
