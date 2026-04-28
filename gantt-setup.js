@@ -496,7 +496,6 @@ _setLayout(_getColsSum(_getDrawingColumns()));
 gantt.config.min_column_width = 22; // カレンダーの列幅を22に設定
 gantt.config.inline_editors_save_on_blur = true; // フォーカスが外れたとき自動保存
 gantt.config.drag_progress = false;
-gantt.config.drag_resize = false;
 gantt.config.drag_links = false;
 gantt.config.row_height = 30;
 gantt.config.scale_height = 60; // 3段構成（20px * 3）に合わせて調整
