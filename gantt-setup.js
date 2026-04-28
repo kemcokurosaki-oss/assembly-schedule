@@ -922,6 +922,7 @@ function _getLightboxSections(taskType) {
             return;
         }
         if (key === 'owner') {
+            sections.push({ name: "major_item", height: 30, map_to: "major_item", type: "busho_select_lb" });
             sections.push({ name: "owner", height: 30, map_to: "owner", type: "owner_select_lb" });
             return;
         }
