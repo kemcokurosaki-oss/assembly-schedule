@@ -1421,20 +1421,10 @@ function _getPlanningColumns() {
 // 列セット切り替え
 function switchColumns(filterType) {
     let cols;
-    const container = document.getElementById('gantt_here');
-    if (filterType === 'long_lead_item') {
-        cols = _getLongtermColumns();
-        container && container.classList.remove('col-text-center');
-    } else if (filterType === 'business_trip') {
-        cols = _getTripColumns();
-        container && container.classList.add('col-text-center');
-    } else if (filterType === 'planning') {
-        cols = _getPlanningColumns();
-        container && container.classList.add('col-text-center');
-    } else {
-        cols = _getDrawingColumns();
-        container && container.classList.add('col-text-center');
-    }
+    if (filterType === 'long_lead_item') cols = _getLongtermColumns();
+    else if (filterType === 'business_trip') cols = _getTripColumns();
+    else if (filterType === 'planning') cols = _getPlanningColumns();
+    else cols = _getDrawingColumns();
     gantt.config.columns = cols;
     _setLayout(_getColsSum(cols));
     gantt.render();
