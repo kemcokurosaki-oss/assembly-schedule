@@ -334,6 +334,37 @@
         /* 標準的なタスクスタイル */
         .gantt_task_line { border-radius: 4px; }
         .gantt_task_content { font-size: 11px; font-family: "メイリオ", Meiryo, sans-serif; }
+        /* タスクバー左下の進捗ドラッグ（▲）を無効化 */
+        .gantt_task_progress,
+        .gantt_task_progress_drag {
+            display: none !important;
+        }
+        /* タスクバー左右のリサイズハンドル（○）を無効化 */
+        .gantt_task_drag,
+        .gantt_task_drag.task_left,
+        .gantt_task_drag.task_right,
+        .gantt_task_drag.gantt_task_left,
+        .gantt_task_drag.gantt_task_right {
+            display: none !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+        /* dhtmlx標準のリンク点(○)と編集ハンドルを強制的に非表示 */
+        #gantt_here .gantt_task_line .gantt_link_control,
+        #gantt_here .gantt_link_control,
+        #gantt_here .gantt_task_link .gantt_link_control,
+        #gantt_here .gantt_link_control .gantt_link_point,
+        #gantt_here .gantt_link_point,
+        #gantt_here .gantt_task_line .gantt_task_drag,
+        #gantt_here .gantt_task_line .gantt_task_drag.task_left,
+        #gantt_here .gantt_task_line .gantt_task_drag.task_right,
+        #gantt_here .gantt_task_line .gantt_task_progress,
+        #gantt_here .gantt_task_line .gantt_task_progress_drag {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
 
         /* wish_date ▼マーク */
         .wish-date-mark {
@@ -2031,6 +2062,10 @@
         _setLayout(_getColsSum(_getDrawingColumns()));
         gantt.config.min_column_width = 22; // カレンダーの列幅を22に設定
         gantt.config.inline_editors_save_on_blur = true; // フォーカスが外れたとき自動保存
+        gantt.config.show_progress = false; // 進捗オーバーレイ自体を表示しない
+        gantt.config.drag_progress = false; // タスクバー左下の▲進捗操作を無効化
+        gantt.config.drag_resize = false; // タスクバー左右の○リサイズ操作を無効化
+        gantt.config.drag_links = false; // タスクバー左右のリンク点(○)操作を無効化
         gantt.config.row_height = 30;
         gantt.config.scale_height = 60; // 3段構成（20px * 3）に合わせて調整
         // マーカープラグインは initialize() 内で有効化するため、ここでは行わない
