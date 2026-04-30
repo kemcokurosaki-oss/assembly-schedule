@@ -730,7 +730,8 @@ async function _finalizePendingNewTaskToDb(id) {
                 is_detailed: false,
                 major_item: '組立',
                 sort_order: item.sort_order,
-                hyphen: item.hyphen ?? null
+                hyphen: item.hyphen ?? null,
+                last_updated_by: (typeof window._getCurrentEditorName === 'function' ? window._getCurrentEditorName() : '') || ''
             }])
             .select();
 
@@ -776,8 +777,28 @@ gantt.attachEvent("onAfterTaskAdd", async function(id, item) {
     // createTask() の仮行追加は _pendingNewTaskLightboxId で管理するため、ここでは何もしない
 });
 
+// ドラッグ中・直後の onAfterTaskUpdate を抑制（auto_scheduling 多重発火・イベント逆順対策）
+const _dragInProgressIds = new Set();  // ドラッグ中のタスクID
+const _dragEndTimeById   = new Map();  // ドラッグ直後のタスクID → 終了時刻
+let   _anyDragEndTime    = 0;          // 直近ドラッグ終了時刻（依存タスク連鎖更新の抑制用）
+const DRAG_SUPPRESS_MS   = 2000;
+
+// ドラッグ開始時にIDをセット（onAfterTaskUpdate が onAfterTaskDrag より先に発火する場合に備える）
+gantt.attachEvent("onBeforeTaskDrag", function(id, mode, e) {
+    _dragInProgressIds.add(String(id));
+    return true;
+});
+
 gantt.attachEvent("onAfterTaskUpdate", async function(id, item) {
     try {
+        // ドラッグ中は onAfterTaskDrag がまだ発火していないためスキップ
+        if (_dragInProgressIds.has(String(id))) return;
+        // ドラッグ直後（同一タスク）：onAfterTaskDrag が既にDBを更新済みのためスキップ
+        const dragAt = _dragEndTimeById.get(String(id));
+        if (dragAt !== undefined && Date.now() - dragAt < DRAG_SUPPRESS_MS) return;
+        // ドラッグ直後（依存タスク）：auto_scheduling による連鎖更新はスキップ
+        if (Date.now() - _anyDragEndTime < DRAG_SUPPRESS_MS) return;
+
         // 新規（createTask の仮行）の DB 反映は onAfterLightbox 経由の _finalizePendingNewTaskToDb で行う
         if (_pendingNewTaskLightboxId != null && String(id) === String(_pendingNewTaskLightboxId)) {
             return;
@@ -814,7 +835,8 @@ gantt.attachEvent("onAfterTaskUpdate", async function(id, item) {
                 duration: item.duration,
                 task_type: item.task_type || currentTaskTypeFilter || null,
                 is_business_trip: (item.task_type || currentTaskTypeFilter) === 'business_trip',
-                wish_date: item.wish_date || null
+                wish_date: item.wish_date || null,
+                last_updated_by: (typeof window._getCurrentEditorName === 'function' ? window._getCurrentEditorName() : '') || ''
             })
             .eq('id', id);
 
@@ -856,6 +878,9 @@ async function syncTaskLocation(taskId, locationCodeRaw) {
 
 // ドラッグ（移動・リサイズ）後にSupabaseへ保存
 gantt.attachEvent("onAfterTaskDrag", async function(id, mode, e) {
+    _dragInProgressIds.delete(String(id));          // ドラッグ完了：進行中フラグを解除
+    _dragEndTimeById.set(String(id), Date.now());   // このタスクの直後抑制タイマーを開始
+    _anyDragEndTime = Date.now();                   // 依存タスク連鎖更新の抑制タイマーを開始
     const item = gantt.getTask(id);
     const completionDate = gantt.date.add(new Date(item.end_date), -1, 'day');
     try {
@@ -864,6 +889,7 @@ gantt.attachEvent("onAfterTaskDrag", async function(id, mode, e) {
             .update({
                 start_date: _toDateStr(item.start_date),
                 end_date: _toDateStr(completionDate),
+                last_updated_by: (typeof window._getCurrentEditorName === 'function' ? window._getCurrentEditorName() : '') || ''
             })
             .eq('id', id);
         if (error) console.error("Error saving drag:", error);

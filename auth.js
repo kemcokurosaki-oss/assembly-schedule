@@ -26,11 +26,23 @@ const EDITORS = [
     'm2-kusakabe@kusakabe.com', // 常務
     'e-kurosaki@kusakabe.com',  // 工程管理者
     's-morimura@kusakabe.com',  // 工程管理者
-    'h-yonezawa@kusakabe.com',
-    'i-kimura@kusakabe.com',
+    'h-yonezawa@kusakabe.com',  // 米澤
+    'i-kimura@kusakabe.com',    // 木村(至)
     // 組立部員は確定後にここに追加
 ];
+const EDITOR_NAMES = {
+    'm2-kusakabe@kusakabe.com': '常務',
+    'e-kurosaki@kusakabe.com':  '黒崎',
+    's-morimura@kusakabe.com':  '森村',
+    'h-yonezawa@kusakabe.com':  '米澤',
+    'i-kimura@kusakabe.com':    '木村(至)',
+};
 let _isEditor = false;
+let _currentEditorEmail = '';
+window._getCurrentEditorName = function() {
+    if (!_isEditor || !_currentEditorEmail) return '';
+    return EDITOR_NAMES[_currentEditorEmail] || _currentEditorEmail.split('@')[0];
+};
 let _offeredPasswordFromEmailLink = false;
 
 /** メール内リンク（招待・確認・復旧）直後にパスワード設定を出すか */
@@ -308,5 +320,6 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
         return;
     }
     const email = session?.user?.email || '';
+    _currentEditorEmail = email;
     _updateUIForAuth(!!session && EDITORS.includes(email));
 });
