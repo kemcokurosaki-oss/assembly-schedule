@@ -211,8 +211,6 @@ window.addEventListener('pageshow', function (ev) {
 const RESOURCE_OVERVIEW_COL_WIDTH = 120;  // 担当者名列
 const RESOURCE_DETAIL_COL_WIDTH   = 350;  // 詳細表示（工事番号＋タスク名列）
 const LOCATION_RESOURCE_GRID_WIDTH = 80;  // 組立場所モードの場所ラベル列
-/** 一覧左パネル内で担当者名の先頭を縦に揃えるための予約幅（種別ラベル＋余白の概算） */
-const RESOURCE_OVERVIEW_LABEL_RESERVE = 52;
 
 // ガントのタイムライン開始位置を取得（グリッド幅＋リサイザー幅を含む正確な値）
 function _getRenderedGanttGridWidth() {
@@ -302,17 +300,8 @@ function renderResourceTimeline(owners) {
     const todayPos = gantt.posFromDate(new Date());
     const todayLineHtml = `<div class="resource-today-line" style="left: ${todayPos}px;"></div>`;
 
-    // 担当者名の字下げ：左端〜名前列までのリード＋名前列幅をグリッド幅から決定（タイムライン境付近で揃える）
     const _cellPad = 5;
     const _nameGap = 4;
-    const nameSlotW = Math.min(
-        102,
-        Math.max(34, actualGridWidth - _cellPad * 2 - _nameGap - RESOURCE_OVERVIEW_LABEL_RESERVE - 6)
-    );
-    const nameAlignLeadPx = Math.max(
-        0,
-        actualGridWidth - _cellPad * 2 - nameSlotW - _nameGap - RESOURCE_OVERVIEW_LABEL_RESERVE
-    );
 
     let html = `<div style="width: ${totalWidth}px;">`; // 全体の幅を指定するコンテナを追加
     // 担当者1人につき3行（組立・組立場所・出張）で表示
@@ -362,19 +351,17 @@ function renderResourceTimeline(owners) {
             // 左セル：先頭行は担当者名＋ラベル、2行目以降はラベルのみ
             const labelColor = rowDef.type === 'drawing' ? '#2e7d32' : '#0277bd';
             const labelBg    = rowDef.type === 'drawing' ? '#e8f5e9' : '#e3f2fd';
-            // 担当者名の先頭を縦一列に揃え（リード＋固定幅名前列）、種別ラベルはその右（タイムライン寄り）
+            // 担当者名は左端、種別ラベル（組立／出張）は右端（列内の余白を最大に）
+            const labelHtml = `<div style="flex-shrink:0;font-size:10px;color:${labelColor};background:${labelBg};border-radius:2px;padding:1px 4px;white-space:nowrap;font-weight:bold;">${rowDef.label}</div>`;
             const leftCellContent = isFirstRow
-                ? `<div style="width:100%;display:flex;align-items:center;padding:0 ${_cellPad}px;box-sizing:border-box;gap:${_nameGap}px;">
-                       <div style="flex:0 0 ${nameAlignLeadPx}px;min-width:0;"></div>
-                       <div style="flex:0 0 ${nameSlotW}px;min-width:0;max-width:${nameSlotW}px;overflow:hidden;">
+                ? `<div style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:0 ${_cellPad}px;box-sizing:border-box;gap:${_nameGap}px;">
+                       <div style="min-width:0;flex:1 1 auto;overflow:hidden;text-align:left;">
                            <div class="resource-owner-link" onclick="showOwnerDetail('${ownerName}')" title="クリックして詳細表示" style="font-weight:bold;color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;box-sizing:border-box;text-align:left;">${ownerName}</div>
                        </div>
-                       <div style="flex-shrink:0;font-size:10px;color:${labelColor};background:${labelBg};border-radius:2px;padding:1px 4px;white-space:nowrap;font-weight:bold;">${rowDef.label}</div>
+                       ${labelHtml}
                    </div>`
-                : `<div style="width:100%;display:flex;align-items:center;padding:0 ${_cellPad}px;box-sizing:border-box;gap:${_nameGap}px;">
-                       <div style="flex:0 0 ${nameAlignLeadPx}px;min-width:0;"></div>
-                       <div style="flex:0 0 ${nameSlotW}px;min-width:0;max-width:${nameSlotW}px;"></div>
-                       <div style="flex-shrink:0;font-size:10px;color:${labelColor};background:${labelBg};border-radius:2px;padding:1px 4px;white-space:nowrap;font-weight:bold;">${rowDef.label}</div>
+                : `<div style="width:100%;display:flex;align-items:center;justify-content:flex-end;padding:0 ${_cellPad}px;box-sizing:border-box;">
+                       ${labelHtml}
                    </div>`;
 
             html += `
