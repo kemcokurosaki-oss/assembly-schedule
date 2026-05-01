@@ -302,6 +302,13 @@ function renderResourceTimeline(owners) {
 
     const _cellPad = 5;
     const _nameGap = 4;
+    // 組立・出張＋下部リソース：設計工程表のように「右寄せエリア内で名前列（先頭左揃え）＋隙間＋種別」
+    const useDesignStyleResourceHeader = !isResourceFullscreen;
+    const _dockLabelReserve = 48;
+    const _dockNameLabelGap = 8;
+    const resourceDockNameColW = useDesignStyleResourceHeader
+        ? Math.max(36, Math.min(112, actualGridWidth - _cellPad * 2 - _dockLabelReserve - _dockNameLabelGap))
+        : 0;
 
     let html = `<div style="width: ${totalWidth}px;">`; // 全体の幅を指定するコンテナを追加
     // 担当者1人につき3行（組立・組立場所・出張）で表示
@@ -351,18 +358,30 @@ function renderResourceTimeline(owners) {
             // 左セル：先頭行は担当者名＋ラベル、2行目以降はラベルのみ
             const labelColor = rowDef.type === 'drawing' ? '#2e7d32' : '#0277bd';
             const labelBg    = rowDef.type === 'drawing' ? '#e8f5e9' : '#e3f2fd';
-            // 担当者名は左端、種別ラベル（組立／出張）は右端（列内の余白を最大に）
             const labelHtml = `<div style="flex-shrink:0;font-size:10px;color:${labelColor};background:${labelBg};border-radius:2px;padding:1px 4px;white-space:nowrap;font-weight:bold;">${rowDef.label}</div>`;
+            const nameLinkHtml = `<div class="resource-owner-link" onclick="showOwnerDetail('${ownerName}')" title="クリックして詳細表示" style="font-weight:bold;color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;box-sizing:border-box;text-align:left;">${ownerName}</div>`;
             const leftCellContent = isFirstRow
-                ? `<div style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:0 ${_cellPad}px;box-sizing:border-box;gap:${_nameGap}px;">
-                       <div style="min-width:0;flex:1 1 auto;overflow:hidden;text-align:left;">
-                           <div class="resource-owner-link" onclick="showOwnerDetail('${ownerName}')" title="クリックして詳細表示" style="font-weight:bold;color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;box-sizing:border-box;text-align:left;">${ownerName}</div>
-                       </div>
-                       ${labelHtml}
-                   </div>`
-                : `<div style="width:100%;display:flex;align-items:center;justify-content:flex-end;padding:0 ${_cellPad}px;box-sizing:border-box;">
-                       ${labelHtml}
-                   </div>`;
+                ? useDesignStyleResourceHeader
+                    ? `<div style="width:100%;height:100%;display:flex;align-items:center;padding:0 ${_cellPad}px;box-sizing:border-box;">
+                           <div style="flex:1 1 auto;min-width:0"></div>
+                           <div style="width:${resourceDockNameColW}px;min-width:0;max-width:${resourceDockNameColW}px;flex-shrink:0;overflow:hidden;text-align:left;">${nameLinkHtml}</div>
+                           <div style="flex:0 0 ${_dockNameLabelGap}px;width:${_dockNameLabelGap}px;flex-shrink:0"></div>
+                           ${labelHtml}
+                       </div>`
+                    : `<div style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:0 ${_cellPad}px;box-sizing:border-box;gap:${_nameGap}px;">
+                           <div style="min-width:0;flex:1 1 auto;overflow:hidden;text-align:left;">${nameLinkHtml}</div>
+                           ${labelHtml}
+                       </div>`
+                : useDesignStyleResourceHeader
+                    ? `<div style="width:100%;height:100%;display:flex;align-items:center;padding:0 ${_cellPad}px;box-sizing:border-box;">
+                           <div style="flex:1 1 auto;min-width:0"></div>
+                           <div style="width:${resourceDockNameColW}px;flex-shrink:0"></div>
+                           <div style="flex:0 0 ${_dockNameLabelGap}px;width:${_dockNameLabelGap}px;flex-shrink:0"></div>
+                           ${labelHtml}
+                       </div>`
+                    : `<div style="width:100%;display:flex;align-items:center;justify-content:flex-end;padding:0 ${_cellPad}px;box-sizing:border-box;">
+                           ${labelHtml}
+                       </div>`;
 
             html += `
                 <div class="resource-item" style="display:flex;${borderTop}${borderBottom}min-height:30px;height:30px;align-items:stretch;width:${totalWidth}px;">
