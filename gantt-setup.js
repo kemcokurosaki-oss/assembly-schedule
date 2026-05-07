@@ -1659,7 +1659,7 @@ gantt.attachEvent("onBeforeTaskDisplay", function(id, task) {
     if (currentTaskNameFilter.length > 0) {
         const taskText = String(task.text || '').trim();
         const matches = currentTaskNameFilter.some(f => {
-            if (f === '出荷') return taskText === '出荷準備' || taskText === '工場出荷';
+            if (f === '出荷') return taskText.includes('出荷準備') || taskText === '工場出荷';
             return taskText === f;
         });
         if (!matches) return false;
