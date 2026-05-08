@@ -1077,17 +1077,45 @@ function renderLocationResourceTimeline() {
                     <div style="position:absolute;top:0;left:0;right:0;bottom:0;z-index:2;">
         `;
 
+        // 工事番号・機械・ユニットが同じタスクを1本のバーにまとめる
+        const mergedGroups = new Map();
         rowTasks.forEach(loc => {
             const t = loc.task;
-            const left  = gantt.posFromDate(t.start_date);
-            const right = gantt.posFromDate(t.end_date);
+            const key = `${t.project_number || ''}__${t.machine || ''}__${t.unit || ''}`;
+            if (!mergedGroups.has(key)) mergedGroups.set(key, []);
+            mergedGroups.get(key).push(t);
+        });
+
+        const ASSEMBLY_OWNERS = ["米澤", "桂", "香西", "古賀", "長谷川", "早川", "廣田", "宮本", "山下", "センティル", "増田", "外注"];
+
+        mergedGroups.forEach(tasks => {
+            const start = new Date(Math.min(...tasks.map(t => t.start_date.getTime())));
+            const end   = new Date(Math.max(...tasks.map(t => t.end_date.getTime())));
+            const left  = gantt.posFromDate(start);
+            const right = gantt.posFromDate(end);
             const width = Math.max(2, right - left);
-            const ownerCls = getOwnerColorClass(t.owner);
+
+            // 機械組立タスクの担当色を優先、なければ組立部員の担当色
+            let ownerCls = 'owner-default';
+            const kikaTask = tasks.find(t => t.text === '機械組立');
+            if (kikaTask) {
+                ownerCls = getOwnerColorClass(kikaTask.owner);
+            } else {
+                for (const t of tasks) {
+                    if (ASSEMBLY_OWNERS.includes(getMainOwnerName(t.owner))) {
+                        ownerCls = getOwnerColorClass(t.owner);
+                        break;
+                    }
+                }
+            }
+
+            const taskNames = tasks.map(t => t.text || '').filter(Boolean).join('/');
+            const rep = tasks[0];
             html += `
                 <div class="resource-cell-bar ${ownerCls}"
                      style="position:absolute;top:4px;height:22px;left:${left}px;width:${width}px;z-index:10;border-radius:2px;"
-                     title="${t.project_number || ''} ${t.machine || ''} ${t.text || ''}">
-                     <span class="resource-bar-text" style="font-size:11px;font-weight:bold;">${t.project_number || ''} ${t.machine || ''}</span>
+                     title="${rep.project_number || ''} ${rep.machine || ''} ${taskNames}">
+                     <span class="resource-bar-text" style="font-size:11px;font-weight:bold;">${rep.project_number || ''} ${rep.machine || ''}</span>
                 </div>
             `;
         });
