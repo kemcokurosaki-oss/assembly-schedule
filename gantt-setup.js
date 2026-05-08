@@ -3124,21 +3124,31 @@ function renderLocationFloorPlan() {
         { w: E1_W,      label: 'E1',     bg: '#bbdefb', fc: '#1565c0' },
     ];
 
-    let html = '<div style="display:flex;align-items:flex-start;gap:16px;padding:12px;">';
-
-    snapshots.forEach(snap => {
-        const dateLabel = _fmtSnapDate(snap.date);
-
-        // 出荷情報（この日に終わるタスク）
-        let bulletHtml = '';
-        const seenTasks = new Set();
+    // 出荷情報を全スナップショット分まとめて生成（機械単位で重複排除）し、高さを統一する
+    const allBulletHtmls = snapshots.map(snap => {
+        const seenKeys = new Set();
+        let bHtml = '';
         snap.endingLocs.forEach(loc => {
-            if (!loc.task || seenTasks.has(loc.task.id)) return;
-            seenTasks.add(loc.task.id);
+            if (!loc.task) return;
+            const key = _fpTaskMergeKey(loc.task);
+            if (seenKeys.has(key)) return;
+            seenKeys.add(key);
             const actualEnd = new Date(loc.task.end_date.getTime() - 86400000);
             const ds = `${actualEnd.getMonth() + 1}/${actualEnd.getDate()}`;
-            bulletHtml += `<div>・${loc.task.project_number || ''}(${loc.task.machine || ''})出荷${ds}</div>`;
+            bHtml += `<div>・${loc.task.project_number || ''}(${loc.task.machine || ''})出荷${ds}</div>`;
         });
+        return bHtml;
+    });
+    const BULLET_LINE_H = 20; // 12px font × 1.7 line-height
+    const bulletBoxH = Math.max(36, Math.max(...allBulletHtmls.map(bh =>
+        (bh.match(/<\/div>/g) || []).length * BULLET_LINE_H
+    )));
+
+    let html = '<div style="display:flex;align-items:flex-start;gap:16px;padding:12px;">';
+
+    snapshots.forEach((snap, snapIdx) => {
+        const dateLabel = _fmtSnapDate(snap.date);
+        const bulletHtml = allBulletHtmls[snapIdx];
 
         // グリッド列ヘッダー行（罫線込みの外寸を本体列と一致させる）
         let hdrHtml = '<div style="display:flex;box-sizing:border-box;">';
