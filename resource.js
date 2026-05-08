@@ -1004,10 +1004,10 @@ function renderLocationResourceTimeline() {
     if (!container) return;
     container.innerHTML = "";
 
-    // 表示行: E1-0〜E1-7、E3-0〜E3-7（E2は通路なので除外）
+    // 表示行: E1-0〜E1-6、E3-0〜E3-6（E2は通路なので除外）
     const LOCATION_ROWS = [];
     ['E1', 'E3'].forEach(group => {
-        for (let area = 0; area <= 7; area++) {
+        for (let area = 0; area <= 6; area++) {
             LOCATION_ROWS.push({ group, area, label: `${group}-${area}` });
         }
     });
