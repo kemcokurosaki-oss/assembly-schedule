@@ -1481,8 +1481,8 @@ function _progressTemplate(obj) {
 function _getDrawingColumns() {
     return [
         { name: "project_number",  label: "工番",       width: 45,  align: "center", editor: { type: "text", map_to: "project_number" } },
-        { name: "machine",         label: "機械",       width: 40,  align: "center", editor: { type: "text", map_to: "machine" } },
-        { name: "unit",            label: "ユニ",       width: 40,  align: "center", editor: { type: "text", map_to: "unit" } },
+        { name: "machine",         label: "機械",       width: 50,  align: "center", editor: { type: "text", map_to: "machine" } },
+        { name: "unit",            label: "ユニ",       width: 50,  align: "center", editor: { type: "text", map_to: "unit" } },
         { name: "text",            label: "タスク",     width: 120, tree: true, align: "left",   editor: { type: "text", map_to: "text" } },
         { name: "owner",           label: "担当",       width: 120, align: "left",   editor: { type: "owner_select", map_to: "owner" } },
         { name: "location_code",   label: "場所",       width: 72,  align: "center",
