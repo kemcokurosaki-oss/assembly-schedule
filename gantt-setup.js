@@ -1541,9 +1541,9 @@ gantt.config.columns = _getDrawingColumns();
 // 出張列定義
 function _getTripColumns() {
     return [
-        { name: "project_number",  label: "工事番号", width: 60,  align: "center", editor: { type: "text", map_to: "project_number" } },
-        { name: "machine",         label: "機械",     width: 40,  align: "center", editor: { type: "text", map_to: "machine" } },
-        { name: "unit",            label: "ユニ",     width: 40,  align: "center", editor: { type: "text", map_to: "unit" } },
+        { name: "project_number",  label: "工事番号", width: 50,  align: "center", editor: { type: "text", map_to: "project_number" } },
+        { name: "machine",         label: "機械",     width: 50,  align: "center", editor: { type: "text", map_to: "machine" } },
+        { name: "unit",            label: "ユニ",     width: 50,  align: "center", editor: { type: "text", map_to: "unit" } },
         { name: "text",            label: "タスク",   width: 190, tree: true, align: "left",   editor: { type: "text", map_to: "text" } },
         { name: "owner",           label: "担当",     width: 80,  align: "left",   editor: { type: "owner_select", map_to: "owner" } },
         { name: "start_date",      label: "開始日",   width: 65,  align: "center",
