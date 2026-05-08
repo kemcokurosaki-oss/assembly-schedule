@@ -3196,7 +3196,7 @@ function renderLocationFloorPlan() {
                     <div style="border:1px solid #888;padding:2px 10px;font-size:13px;font-family:メイリオ,sans-serif;background:#fff;text-align:center;">${dateLabel}</div>
                     <span style="font-size:13px;margin-left:4px;">〜</span>
                 </div>
-                <div style="min-height:36px;font-size:12px;font-family:メイリオ,sans-serif;color:#333;line-height:1.7;margin-bottom:4px;width:${ROW_COL_W + E3_W + E2_COL_W + E1_W}px;">${bulletHtml}</div>
+                <div style="height:${bulletBoxH}px;overflow:hidden;font-size:12px;font-family:メイリオ,sans-serif;color:#333;line-height:1.7;margin-bottom:4px;width:${ROW_COL_W + E3_W + E2_COL_W + E1_W}px;">${bulletHtml}</div>
                 <div style="border:2px solid #888;display:inline-flex;flex-direction:column;background:#fff;">
                     ${hdrHtml}
                     ${bodyHtml}
