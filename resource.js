@@ -1089,7 +1089,8 @@ function renderLocationResourceTimeline() {
         const ASSEMBLY_OWNERS = ["米澤", "桂", "香西", "古賀", "長谷川", "早川", "廣田", "宮本", "山下", "センティル", "増田", "外注"];
 
         mergedGroups.forEach(tasks => {
-            const start = new Date(Math.min(...tasks.map(t => t.start_date.getTime())));
+            tasks.sort((a, b) => a.start_date.getTime() - b.start_date.getTime());
+            const start = new Date(tasks[0].start_date.getTime());
             const end   = new Date(Math.max(...tasks.map(t => t.end_date.getTime())));
             const left  = gantt.posFromDate(start);
             const right = gantt.posFromDate(end);
