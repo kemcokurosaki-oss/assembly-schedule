@@ -20,6 +20,13 @@ const _authUrlSnapshot = (function () {
 const _pageInitType = _authUrlSnapshot.type;
 const supabaseClient = supabase.createClient(S_URL, S_KEY);
 
+// 先にログイン画面を出し、工程表本体の一瞬の表示を防ぐ（script は body 末尾想定）
+(function _bootstrapAuthGateUi() {
+    document.body.classList.add('schedule-awaiting-auth');
+    var ov = document.getElementById('login_overlay');
+    if (ov) ov.classList.add('open', 'auth-gate');
+})();
+
 // ===== 認証管理 =====
 // 編集可能なメールアドレスリスト
 const EDITORS = [
@@ -37,7 +44,30 @@ const EDITOR_NAMES = {
     'h-yonezawa@kusakabe.com':  '米澤',
     'i-kimura@kusakabe.com':    '木村(至)',
 };
+// 閲覧専用（ログイン可・編集不可）
+const VIEWERS = [
+    'n-katsura@kusakabe.com',
+    'h-hirota@kusakabe.com',
+    'r-hasegawa@kusakabe.com',
+    'y-koga@kusakabe.com',
+    'y-yamashita@kusakabe.com',
+    'm-nakajima@kusakabe.com',
+    'm-kousai@kusakabe.com',
+    't-hayakawa@kusakabe.com',
+    'm-miyamoto@kusakabe.com',
+    'senthilkumar@kusakabe.com',
+    'k-kimura@kusakabe.com',
+    'd-moritoki@kusakabe.com',
+    't-moriguchi@kusakabe.com',
+];
+
+function _emailInList(email, list) {
+    const e = (email || '').trim().toLowerCase();
+    return list.some(function (x) { return String(x).trim().toLowerCase() === e; });
+}
+
 let _isEditor = false;
+let _isViewer = false;
 let _currentEditorEmail = '';
 window._getCurrentEditorName = function() {
     if (!_isEditor || !_currentEditorEmail) return '';
@@ -60,8 +90,9 @@ function _shouldOpenSetPasswordFromUrl(event, session) {
     return false;
 }
 
-function _updateUIForAuth(isEditor) {
+function _updateUIForAuth(isEditor, isViewer) {
     _isEditor = isEditor;
+    _isViewer = !!isViewer;
     gantt.config.readonly = !isEditor;
     const hideCreateInLocation =
         (typeof currentTaskTypeFilter !== 'undefined' &&
@@ -70,53 +101,89 @@ function _updateUIForAuth(isEditor) {
     document.getElementById('create_task_btn').style.display =
         isEditor && !hideCreateInLocation ? '' : 'none';
     document.getElementById('multi_delete_btn').style.display  = isEditor ? '' : 'none';
-    document.getElementById('archive_btn_wrap').style.display  = isEditor ? '' : 'none';
+    document.getElementById('archive_btn_wrap').style.display =
+        (isEditor || isViewer) ? '' : 'none';
     const authBtn = document.getElementById('auth_btn');
     if (authBtn) {
-        authBtn.textContent = isEditor ? 'ログアウト' : 'ログイン';
-        authBtn.classList.toggle('logged-in', isEditor);
+        const loggedIn = isEditor || _isViewer;
+        authBtn.textContent = loggedIn ? 'ログアウト' : 'ログイン';
+        authBtn.classList.toggle('logged-in', loggedIn);
     }
     gantt.render();
 }
 
 function handleAuthBtn() {
-    if (_isEditor) {
+    if (_isEditor || _isViewer) {
         if (confirm('ログアウトしますか？')) { doLogout(); }
     } else {
         openLoginDialog();
     }
 }
 
+function _openAuthGateLogin() {
+    document.body.classList.add('schedule-awaiting-auth');
+    const ov = document.getElementById('login_overlay');
+    ov.classList.add('open', 'auth-gate');
+    setTimeout(function () { document.getElementById('login_email').focus(); }, 100);
+}
+
+function _closeAuthGateLogin() {
+    document.body.classList.remove('schedule-awaiting-auth');
+    const ov = document.getElementById('login_overlay');
+    ov.classList.remove('open', 'auth-gate');
+}
+
 function openLoginDialog() {
     document.getElementById('login_email').value = '';
     document.getElementById('login_password').value = '';
     document.getElementById('login_error').style.display = 'none';
-    document.getElementById('login_overlay').classList.add('open');
-    setTimeout(() => document.getElementById('login_email').focus(), 100);
+    const ov = document.getElementById('login_overlay');
+    ov.classList.remove('auth-gate');
+    document.body.classList.remove('schedule-awaiting-auth');
+    ov.classList.add('open');
+    setTimeout(function () { document.getElementById('login_email').focus(); }, 100);
 }
 
 function closeLoginDialog() {
-    document.getElementById('login_overlay').classList.remove('open');
+    const ov = document.getElementById('login_overlay');
+    if (ov.classList.contains('auth-gate')) return;
+    ov.classList.remove('open');
 }
 
 async function doLogin() {
     const email    = document.getElementById('login_email').value.trim();
     const password = document.getElementById('login_password').value;
     const errEl    = document.getElementById('login_error');
+    const submitBtn = document.getElementById('login_btn_submit');
     errEl.style.display = 'none';
-    document.getElementById('login_btn_submit').textContent = '処理中...';
-    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-    document.getElementById('login_btn_submit').textContent = 'ログイン';
-    if (error) {
+    submitBtn.textContent = '処理中...';
+    submitBtn.disabled = true;
+    let signError = null;
+    try {
+        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        signError = error;
+    } catch (e) {
+        console.error(e);
+        errEl.textContent = '通信エラーが発生しました。ネットワークやブラウザの制限を確認してください。';
+        errEl.style.display = 'block';
+        return;
+    } finally {
+        submitBtn.textContent = 'ログイン';
+        submitBtn.disabled = false;
+    }
+    if (signError) {
         errEl.textContent = 'メールアドレスまたはパスワードが正しくありません';
         errEl.style.display = 'block';
-    } else {
+        return;
+    }
+    if (!document.getElementById('login_overlay').classList.contains('auth-gate')) {
         closeLoginDialog();
     }
 }
 
 async function doLogout() {
     await supabaseClient.auth.signOut();
+    window.location.reload();
 }
 
 function openSetPasswordDialog() {
@@ -156,7 +223,21 @@ async function doSetPassword() {
         // URLのハッシュをクリア
         history.replaceState(null, '', window.location.pathname + window.location.search);
         const { data: { user } } = await supabaseClient.auth.getUser();
-        _updateUIForAuth(!!user && EDITORS.includes(user.email));
+        const em = user?.email || '';
+        const isEd = !!user && _emailInList(em, EDITORS);
+        const isVw = !!user && !isEd && _emailInList(em, VIEWERS);
+        if (user && !isEd && !isVw) {
+            await supabaseClient.auth.signOut();
+            document.getElementById('login_email').value = '';
+            document.getElementById('login_password').value = '';
+            const errEl = document.getElementById('login_error');
+            errEl.textContent = 'このメールアドレスでは組立工程表を利用できません。';
+            errEl.style.display = 'block';
+            _openAuthGateLogin();
+        } else {
+            _updateUIForAuth(isEd, isVw);
+            await tryExecuteScheduleDataLoader();
+        }
     }
 }
 
@@ -173,12 +254,12 @@ var HELP_TIPS = [
     { id: 'zoom_day_btn',        title: '日単位',             text: '1日単位で詳細表示（デフォルト）' },
     { id: 'zoom_week_btn',       title: '週単位',             text: '週単位で全体スケジュールを把握' },
     { id: 'help_btn',            title: '？使い方ガイド',     text: 'クリックで各ボタンの説明を表示\nもう一度クリックで閉じます' },
-    { id: 'auth_btn',            title: 'ログイン',           text: '編集者としてログイン\nタスクの追加・編集・削除が可能になります' },
+    { id: 'auth_btn',            title: 'ログイン / ログアウト', text: '編集権のある方はログインで追加・編集・削除が可能\n閲覧のみの方はログインで閲覧のみ（ログアウトもここ）' },
     { id: 'project_filter_btn',  title: '工事番号フィルター', text: 'クリックで工事番号を選択\n複数選択可。「全表示」で全件に戻す' },
     { id: 'owner_filter_btn',    title: '担当者フィルター',   text: '特定担当者のみ絞り込み（複数選択可）\nリソース表示時に表示されます' },
     { id: 'resource_toggle',     title: 'リソース表示',       text: 'ガントチャート下部に\n担当者別の業務状況を並列表示' },
     { id: 'create_task_btn',     title: '新規タスク追加',     text: 'タスクを末尾に追加します（要ログイン）' },
-    { id: 'archive_btn_wrap',    title: 'アーカイブ',         text: '完了工事の保管・参照\n▼クリックでメニュー表示（要ログイン）' },
+    { id: 'archive_btn_wrap',    title: '完了工事一覧',       text: '完了工事の一覧・詳細の参照\n編集者・閲覧専用ログイン時に表示' },
 ];
 var GRID_TIP = {
     title: 'グリッド（左側）',
@@ -310,16 +391,95 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeHelp();
 });
 
+// ----- ログイン後にのみ工程表データを読み込む（RLS 前提）-----
+let _scheduleDataLoader = null;
+let _scheduleDataLoaded = false;
+let _scheduleDataLoadInProgress = false;
+
+async function tryExecuteScheduleDataLoader() {
+    if (!_scheduleDataLoader || _scheduleDataLoaded || _scheduleDataLoadInProgress) return;
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const email = session?.user?.email || '';
+
+    if (_shouldOpenSetPasswordFromUrl('INITIAL_SESSION', session)) {
+        document.body.classList.add('schedule-awaiting-auth');
+        return;
+    }
+    if (!session) {
+        document.body.classList.add('schedule-awaiting-auth');
+        _openAuthGateLogin();
+        return;
+    }
+    const isEd = _emailInList(email, EDITORS);
+    const isVw = !isEd && _emailInList(email, VIEWERS);
+    if (!isEd && !isVw) {
+        await supabaseClient.auth.signOut();
+        document.body.classList.add('schedule-awaiting-auth');
+        const errEl = document.getElementById('login_error');
+        errEl.textContent = 'このメールアドレスでは組立工程表を利用できません。管理者にお問い合わせください。';
+        errEl.style.display = 'block';
+        _openAuthGateLogin();
+        return;
+    }
+    document.body.classList.remove('schedule-awaiting-auth');
+    _closeAuthGateLogin();
+    _updateUIForAuth(isEd, isVw);
+    _scheduleDataLoadInProgress = true;
+    try {
+        await _scheduleDataLoader();
+        _scheduleDataLoaded = true;
+        if (typeof gantt !== 'undefined') {
+            requestAnimationFrame(function () {
+                gantt.setSizes();
+                gantt.render();
+            });
+        }
+    } catch (err) {
+        console.error(err);
+        alert('データの読み込みに失敗しました。ページを再読み込みしてください。');
+    } finally {
+        _scheduleDataLoadInProgress = false;
+    }
+}
+
+window.__registerScheduleDataLoader = async function (loader) {
+    _scheduleDataLoader = loader;
+    await tryExecuteScheduleDataLoader();
+};
+
 // 認証状態の変化を監視（ページロード時・ログイン・ログアウト時に自動で呼ばれる）
-supabaseClient.auth.onAuthStateChange((event, session) => {
+supabaseClient.auth.onAuthStateChange(async (event, session) => {
     if (_shouldOpenSetPasswordFromUrl(event, session)) {
         if (!_offeredPasswordFromEmailLink) {
             _offeredPasswordFromEmailLink = true;
+            document.body.classList.add('schedule-awaiting-auth');
             openSetPasswordDialog();
         }
         return;
     }
     const email = session?.user?.email || '';
     _currentEditorEmail = email;
-    _updateUIForAuth(!!session && EDITORS.includes(email));
+    if (session) {
+        const isEd = _emailInList(email, EDITORS);
+        const isVw = !isEd && _emailInList(email, VIEWERS);
+        if (!isEd && !isVw) {
+            await supabaseClient.auth.signOut();
+            const errEl = document.getElementById('login_error');
+            errEl.textContent = 'このメールアドレスでは組立工程表を利用できません。管理者にお問い合わせください。';
+            errEl.style.display = 'block';
+            _openAuthGateLogin();
+            return;
+        }
+        _updateUIForAuth(isEd, isVw);
+        // signIn の Promise をブロックしないよう、データ読み込みは次ティックで実行（「処理中…」が固まるのを防ぐ）
+        setTimeout(function () {
+            tryExecuteScheduleDataLoader().catch(function (err) {
+                console.error(err);
+            });
+        }, 0);
+        return;
+    }
+    _updateUIForAuth(false, false);
+    document.body.classList.add('schedule-awaiting-auth');
+    _openAuthGateLogin();
 });

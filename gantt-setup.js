@@ -2742,67 +2742,68 @@ async function initialize() {
         }
     });
 
-    // 2. 完了済み工事番号（全体工程表連動）と休日データを読み込む
-    await loadCompletedProjects();
-    await loadHolidays();
+    const runScheduleDataInit = async () => {
+        // 2. 完了済み工事番号（全体工程表連動）と休日データを読み込む
+        await loadCompletedProjects();
+        await loadHolidays();
 
-    // 3. セレクトボックスを構築（パラメータがあれば selected になる）
-    await initProjectSelect(projectParam);
+        // 3. セレクトボックスを構築（パラメータがあれば selected になる）
+        await initProjectSelect(projectParam);
 
-    // 3. マーカー追加
-    const today = new Date();
-    gantt.addMarker({
-        start_date: today,
-        css: "today-line",
-        text: "今日",
-        title: "今日: " + gantt.templates.date_grid(today)
-    });
+        // 3. マーカー追加
+        const today = new Date();
+        gantt.addMarker({
+            start_date: today,
+            css: "today-line",
+            text: "今日",
+            title: "今日: " + gantt.templates.date_grid(today)
+        });
 
-    // 4. データを読み込む
-    await loadData();
+        // 4. データを読み込む
+        await loadData();
 
-    // 5. フィルタ適用
-    updateDisplay();
+        // 5. フィルタ適用
+        updateDisplay();
 
-    // 担当者フィルタードロップダウンのチェックボックスを生成
-    _initOwnerFilterDropdown();
+        // 担当者フィルタードロップダウンのチェックボックスを生成
+        _initOwnerFilterDropdown();
 
-    // 6. 再描画
-    gantt.render();
+        // 6. 再描画
+        gantt.render();
 
-    // 6b. 今日の日付へスクロール（ガントモード表示時の初期位置）
-    gantt.showDate(new Date());
+        // 6b. 今日の日付へスクロール（ガントモード表示時の初期位置）
+        gantt.showDate(new Date());
 
-    // 7. 初期表示モードを設定
-    // task_type パラメータがある場合（全体工程表から遷移）はガントモードで起動
-    //   - task_type=assembly      → 組立モード
-    //   - task_type=business_trip → 出張モード
-    // task_type パラメータがない場合（直接アクセス）は全タスクをガントで表示
-    const taskTypeParam = urlParams.get('task_type');
-    requestAnimationFrame(() => {
-        if (taskTypeParam) {
-            // 全体工程表からの遷移：指定モードのガントビューで起動
-            currentTaskTypeFilter = taskTypeParam;
-            updateFilterButtons();
-            switchColumns(taskTypeParam);
-            // フィルターボタンクリック時と同様にズームレベルを再設定してカレンダーヘッダーを完全再描画
-            setTimeout(() => {
-                gantt.setSizes();
-                const currentLevel = document.querySelector('.zoom-btn.active')?.textContent === '週単位' ? 'week' : 'day';
-                gantt.ext.zoom.setLevel(currentLevel);
-            }, 0);
-        } else {
-            // 直接アクセス：組立モードで起動
-            currentTaskTypeFilter = 'assembly';
-            updateFilterButtons();
-            switchColumns('assembly');
-            setTimeout(() => {
-                gantt.setSizes();
-                const currentLevel = document.querySelector('.zoom-btn.active')?.textContent === '週単位' ? 'week' : 'day';
-                gantt.ext.zoom.setLevel(currentLevel);
-            }, 0);
-        }
-    });
+        // 7. 初期表示モードを設定
+        const taskTypeParam = urlParams.get('task_type');
+        requestAnimationFrame(() => {
+            if (taskTypeParam) {
+                currentTaskTypeFilter = taskTypeParam;
+                updateFilterButtons();
+                switchColumns(taskTypeParam);
+                setTimeout(() => {
+                    gantt.setSizes();
+                    const currentLevel = document.querySelector('.zoom-btn.active')?.textContent === '週単位' ? 'week' : 'day';
+                    gantt.ext.zoom.setLevel(currentLevel);
+                }, 0);
+            } else {
+                currentTaskTypeFilter = 'assembly';
+                updateFilterButtons();
+                switchColumns('assembly');
+                setTimeout(() => {
+                    gantt.setSizes();
+                    const currentLevel = document.querySelector('.zoom-btn.active')?.textContent === '週単位' ? 'week' : 'day';
+                    gantt.ext.zoom.setLevel(currentLevel);
+                }, 0);
+            }
+        });
+    };
+
+    if (typeof window.__registerScheduleDataLoader === 'function') {
+        await window.__registerScheduleDataLoader(runScheduleDataInit);
+    } else {
+        await runScheduleDataInit();
+    }
 }
 
 // 担当者カラー凡例モーダル

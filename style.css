@@ -845,6 +845,13 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
     align-items: center; justify-content: center;
 }
 #login_overlay.open { display: flex; }
+/* 未ログイン時：工程表本体を隠しログインのみ表示 */
+body.schedule-awaiting-auth .main-container {
+    display: none !important;
+}
+#login_overlay.auth-gate #login_btn_cancel {
+    display: none !important;
+}
 #login_dialog {
     background: #fff; border-radius: 8px; padding: 32px 28px;
     width: 300px; box-shadow: 0 4px 24px rgba(0,0,0,0.3);
