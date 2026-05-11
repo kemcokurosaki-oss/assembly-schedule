@@ -93,7 +93,11 @@ function _shouldOpenSetPasswordFromUrl(event, session) {
 function _updateUIForAuth(isEditor, isViewer) {
     _isEditor = isEditor;
     _isViewer = !!isViewer;
-    gantt.config.readonly = !isEditor;
+    // Supabase の INITIAL_SESSION は gantt.init より前に届くことがあり、
+    // 未初期化で gantt.render() すると例外でログイン処理が止まる
+    if (typeof gantt !== 'undefined' && window.__assemblyGanttInited) {
+        gantt.config.readonly = !isEditor;
+    }
     const hideCreateInLocation =
         (typeof currentTaskTypeFilter !== 'undefined' &&
             currentTaskTypeFilter === 'long_lead_item') ||
@@ -109,7 +113,11 @@ function _updateUIForAuth(isEditor, isViewer) {
         authBtn.textContent = loggedIn ? 'ログアウト' : 'ログイン';
         authBtn.classList.toggle('logged-in', loggedIn);
     }
-    gantt.render();
+    if (typeof gantt !== 'undefined' && window.__assemblyGanttInited) {
+        try {
+            gantt.render();
+        } catch (_e) { /* 初期化直後の競合時は無視 */ }
+    }
 }
 
 function handleAuthBtn() {
@@ -445,6 +453,22 @@ async function tryExecuteScheduleDataLoader() {
 window.__registerScheduleDataLoader = async function (loader) {
     _scheduleDataLoader = loader;
     await tryExecuteScheduleDataLoader();
+};
+
+/** gantt-setup の initialize 完了後に呼ぶ（ガント初期化後に認証 UI・データ読み込みを再同期） */
+window.__onAssemblyGanttShellReady = async function () {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) return;
+    const em = session.user?.email || '';
+    const isEd = _emailInList(em, EDITORS);
+    const isVw = !isEd && _emailInList(em, VIEWERS);
+    if (!isEd && !isVw) return;
+    _updateUIForAuth(isEd, isVw);
+    try {
+        await tryExecuteScheduleDataLoader();
+    } catch (err) {
+        console.error(err);
+    }
 };
 
 // 認証状態の変化を監視（ページロード時・ログイン・ログアウト時に自動で呼ばれる）

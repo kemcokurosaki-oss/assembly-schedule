@@ -2317,6 +2317,7 @@ async function initialize() {
     _setLayout(_getColsSum(gantt.config.columns));
 
     gantt.init("gantt_here");
+    window.__assemblyGanttInited = true;
 
     // === グリッド操作設定 ===
 
@@ -2803,6 +2804,10 @@ async function initialize() {
         await window.__registerScheduleDataLoader(runScheduleDataInit);
     } else {
         await runScheduleDataInit();
+    }
+
+    if (typeof window.__onAssemblyGanttShellReady === 'function') {
+        await window.__onAssemblyGanttShellReady();
     }
 }
 
