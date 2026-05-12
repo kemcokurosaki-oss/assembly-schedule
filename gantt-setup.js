@@ -702,9 +702,8 @@ async function _finalizePendingNewTaskToDb(id) {
             ? null
             : _toDateStr(gantt.date.add(new Date(item.end_date), -1, "day"));
 
-        const { data, error } = await supabaseClient
-            .from('tasks')
-            .insert([{
+        const _lb = (typeof window._getCurrentEditorName === 'function' ? window._getCurrentEditorName() : '') || '';
+        const insertRow = {
                 text: item.text || "",
                 start_date: _toDateStr(item.start_date),
                 end_date: endDateStr,
@@ -730,9 +729,13 @@ async function _finalizePendingNewTaskToDb(id) {
                 is_detailed: false,
                 major_item: '組立',
                 sort_order: item.sort_order,
-                hyphen: item.hyphen ?? null,
-                last_updated_by: (typeof window._getCurrentEditorName === 'function' ? window._getCurrentEditorName() : '') || ''
-            }])
+                hyphen: item.hyphen ?? null
+        };
+        if (_lb) insertRow.last_updated_by = _lb;
+
+        const { data, error } = await supabaseClient
+            .from('tasks')
+            .insert([insertRow])
             .select();
 
         if (error) {
@@ -809,9 +812,8 @@ gantt.attachEvent("onAfterTaskUpdate", async function(id, item) {
             ? null
             : _toDateStr(gantt.date.add(new Date(item.end_date), -1, 'day'));
 
-        const { error } = await supabaseClient
-            .from('tasks')
-            .update({
+        const _lb = (typeof window._getCurrentEditorName === 'function' ? window._getCurrentEditorName() : '') || '';
+        const updBody = {
                 text: item.text,
                 start_date: _toDateStr(item.start_date),
                 end_date: endDateStr,
@@ -835,9 +837,13 @@ gantt.attachEvent("onAfterTaskUpdate", async function(id, item) {
                 duration: item.duration,
                 task_type: item.task_type || currentTaskTypeFilter || null,
                 is_business_trip: (item.task_type || currentTaskTypeFilter) === 'business_trip',
-                wish_date: item.wish_date || null,
-                last_updated_by: (typeof window._getCurrentEditorName === 'function' ? window._getCurrentEditorName() : '') || ''
-            })
+                wish_date: item.wish_date || null
+        };
+        if (_lb) updBody.last_updated_by = _lb;
+
+        const { error } = await supabaseClient
+            .from('tasks')
+            .update(updBody)
             .eq('id', id);
 
         if (error) {
@@ -884,13 +890,17 @@ gantt.attachEvent("onAfterTaskDrag", async function(id, mode, e) {
     const item = gantt.getTask(id);
     const completionDate = gantt.date.add(new Date(item.end_date), -1, 'day');
     try {
-        const { error } = await supabaseClient
-            .from('tasks')
-            .update({
+        const _lb = (typeof window._getCurrentEditorName === 'function' ? window._getCurrentEditorName() : '') || '';
+        const dragUpd = {
                 start_date: _toDateStr(item.start_date),
                 end_date: _toDateStr(completionDate),
-                last_updated_by: (typeof window._getCurrentEditorName === 'function' ? window._getCurrentEditorName() : '') || ''
-            })
+                duration: item.duration != null ? Number(item.duration) : null
+        };
+        if (dragUpd.duration == null || !Number.isFinite(dragUpd.duration) || dragUpd.duration < 1) delete dragUpd.duration;
+        if (_lb) dragUpd.last_updated_by = _lb;
+        const { error } = await supabaseClient
+            .from('tasks')
+            .update(dragUpd)
             .eq('id', id);
         if (error) console.error("Error saving drag:", error);
         else if (isResourceView) updateResourceData();
@@ -2592,9 +2602,10 @@ async function initialize() {
             return src[key] instanceof Date ? _toDateStr(src[key]) : src[key];
         };
 
+        const _lb = (typeof window._getCurrentEditorName === 'function' ? window._getCurrentEditorName() : '') || '';
         const { data, error } = await supabaseClient
             .from('tasks')
-            .insert([{
+            .insert([Object.assign({
                 text:             _v('text', ""),
                 start_date:       _dt('start_date'),
                 end_date:         _dt('end_date'),
@@ -2618,7 +2629,7 @@ async function initialize() {
                 is_detailed:      false,
                 major_item:       '組立',
                 sort_order:       insertSortOrder
-            }])
+            }, _lb ? { last_updated_by: _lb } : {})])
             .select();
 
         if (error) {
@@ -2676,6 +2687,8 @@ async function initialize() {
         // コピー元タスクをsort_order順に並べて貼り付け順序を維持
         const sortedCopied = [..._copiedTasks].sort((a, b) => _getSO(a) - _getSO(b));
 
+        const _lb = (typeof window._getCurrentEditorName === 'function' ? window._getCurrentEditorName() : '') || '';
+
         const insertRows = sortedCopied.map((src, i) => {
             const endDate = src.end_date instanceof Date
                 ? _toDateStr(gantt.date.add(new Date(src.end_date), -1, 'day'))
@@ -2683,7 +2696,7 @@ async function initialize() {
             const startDate = src.start_date instanceof Date
                 ? _toDateStr(src.start_date)
                 : src.start_date;
-            return {
+            return Object.assign({
                 text:             src.text             || "",
                 start_date:       startDate,
                 end_date:         endDate,
@@ -2707,7 +2720,7 @@ async function initialize() {
                 is_detailed:      false,
                 major_item:       '組立',
                 sort_order:       baseSO + (i + 1) * 1000
-            };
+            }, _lb ? { last_updated_by: _lb } : {});
         });
 
         const { error } = await supabaseClient.from('tasks').insert(insertRows);
