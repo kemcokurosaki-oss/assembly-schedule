@@ -9,12 +9,32 @@ const _authUrlSnapshot = (function () {
         const hash = u.hash.startsWith('#') ? u.hash.slice(1) : '';
         const hp = new URLSearchParams(hash);
         const sp = new URLSearchParams(u.search);
+        const type = hp.get('type') || sp.get('type') || '';
+        const hadPkceCode = !!sp.get('code');
+        const hadImplicitGrant = hp.has('access_token');
+        const hadTokenHash = !!sp.get('token_hash');
+        const pendingEmailLink =
+            hadPkceCode ||
+            hadImplicitGrant ||
+            hadTokenHash ||
+            type === 'invite' ||
+            type === 'signup' ||
+            type === 'recovery';
         return {
-            type: hp.get('type') || sp.get('type') || '',
-            hadPkceCode: !!sp.get('code'),
+            type: type,
+            hadPkceCode: hadPkceCode,
+            hadImplicitGrant: hadImplicitGrant,
+            hadTokenHash: hadTokenHash,
+            pendingEmailLink: pendingEmailLink,
         };
     } catch (_e) {
-        return { type: '', hadPkceCode: false };
+        return {
+            type: '',
+            hadPkceCode: false,
+            hadImplicitGrant: false,
+            hadTokenHash: false,
+            pendingEmailLink: false,
+        };
     }
 })();
 const _pageInitType = _authUrlSnapshot.type;
@@ -85,6 +105,10 @@ function _shouldOpenSetPasswordFromUrl(event, session) {
     }
     // PKCE: 招待/確認/リセットで ?code= のみ届く → type が無い
     if (_authUrlSnapshot.hadPkceCode && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
+        return true;
+    }
+    // メール内の token_hash リンク（type が付かないことがある）
+    if (_authUrlSnapshot.hadTokenHash && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
         return true;
     }
     return false;
@@ -415,6 +439,9 @@ async function tryExecuteScheduleDataLoader() {
     }
     if (!session) {
         document.body.classList.add('schedule-awaiting-auth');
+        if (_authUrlSnapshot.pendingEmailLink) {
+            return;
+        }
         _openAuthGateLogin();
         return;
     }
@@ -501,6 +528,10 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
                 console.error(err);
             });
         }, 0);
+        return;
+    }
+    if (event === 'INITIAL_SESSION' && _authUrlSnapshot.pendingEmailLink) {
+        document.body.classList.add('schedule-awaiting-auth');
         return;
     }
     _updateUIForAuth(false, false);
