@@ -95,10 +95,43 @@ window._getCurrentEditorName = function() {
 };
 let _offeredPasswordFromEmailLink = false;
 
+function _decodeJwtPayload(accessToken) {
+    try {
+        if (!accessToken || typeof accessToken !== 'string') return null;
+        var parts = accessToken.split('.');
+        if (parts.length < 2) return null;
+        var b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        while (b64.length % 4) b64 += '=';
+        return JSON.parse(atob(b64));
+    } catch (_e) {
+        return null;
+    }
+}
+
+/**
+ * 招待・パスワードリセットのメールリンク直後のセッションか。
+ * SIGNED_IN が PASSWORD_RECOVERY より先に届く／URL から type・code が消えたあとでも JWT amr で判定する。
+ */
+function _sessionNeedsEmailLinkPasswordStep(session) {
+    if (!session || !session.access_token) return false;
+    var payload = _decodeJwtPayload(session.access_token);
+    var amr = payload && payload.amr;
+    if (!Array.isArray(amr)) return false;
+    return amr.some(function (m) {
+        if (m === 'recovery' || m === 'invite') return true;
+        if (typeof m === 'object' && m && (m.method === 'recovery' || m.method === 'invite')) return true;
+        return false;
+    });
+}
+
 /** メール内リンク（招待・確認・復旧）直後にパスワード設定を出すか */
 function _shouldOpenSetPasswordFromUrl(event, session) {
     if (!session) return false;
     if (event === 'PASSWORD_RECOVERY') return true;
+    if (_sessionNeedsEmailLinkPasswordStep(session) &&
+        (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'PASSWORD_RECOVERY')) {
+        return true;
+    }
     const t = _pageInitType;
     if (t === 'invite' || t === 'signup' || t === 'recovery') {
         return event === 'SIGNED_IN' || event === 'INITIAL_SESSION';
