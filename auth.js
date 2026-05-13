@@ -241,6 +241,12 @@ async function doLogin() {
         errEl.style.display = 'block';
         return;
     }
+    if (!_emailInList(email, EDITORS) && !_emailInList(email, VIEWERS)) {
+        await supabaseClient.auth.signOut();
+        errEl.textContent = 'この工程表へのアクセス権限がありません';
+        errEl.style.display = 'block';
+        return;
+    }
     if (!document.getElementById('login_overlay').classList.contains('auth-gate')) {
         closeLoginDialog();
     }
