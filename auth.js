@@ -41,10 +41,13 @@ const _pageInitType = _authUrlSnapshot.type;
 const supabaseClient = supabase.createClient(S_URL, S_KEY);
 
 // 先にログイン画面を出し、工程表本体の一瞬の表示を防ぐ（script は body 末尾想定）
+// メールリンク（招待・リセット）経由の場合はパスワード設定画面を待つためログイン画面を開かない
 (function _bootstrapAuthGateUi() {
     document.body.classList.add('schedule-awaiting-auth');
-    var ov = document.getElementById('login_overlay');
-    if (ov) ov.classList.add('open', 'auth-gate');
+    if (!_authUrlSnapshot.pendingEmailLink) {
+        var ov = document.getElementById('login_overlay');
+        if (ov) ov.classList.add('open', 'auth-gate');
+    }
 })();
 
 // ===== 認証管理 =====
