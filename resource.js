@@ -1117,7 +1117,7 @@ function renderLocationResourceTimeline() {
                 <div class="resource-cell-bar ${ownerCls}"
                      style="position:absolute;top:4px;height:22px;left:${left}px;width:${width}px;z-index:10;border-radius:2px;"
                      title="${rep.project_number || ''} ${rep.machine || ''} ${taskNames}">
-                     <span class="resource-bar-text" style="font-size:11px;font-weight:bold;">${[rep.project_number, rep.machine, rep.unit, rep.text].filter(v=>v).join(' ')}</span>
+                     <span class="resource-bar-text" style="font-size:11px;font-weight:bold;">${rep.project_number || ''} ${rep.machine || ''}</span>
                 </div>
             `;
         });
