@@ -47,6 +47,22 @@ const supabaseClient = supabase.createClient(S_URL, S_KEY);
     if (!_authUrlSnapshot.pendingEmailLink) {
         var ov = document.getElementById('login_overlay');
         if (ov) ov.classList.add('open', 'auth-gate');
+    } else {
+        // メールリンク処理のタイムアウト：10秒以内にセッションが確立しない場合は
+        // リンク切れ／Teams等によるトークン先行消費の可能性があるためログインを促す
+        setTimeout(function () {
+            if (!document.body.classList.contains('schedule-awaiting-auth')) return;
+            var ov = document.getElementById('login_overlay');
+            if (ov && ov.classList.contains('open')) return; // already showing
+            var setpwOv = document.getElementById('setpw_overlay');
+            if (setpwOv && setpwOv.classList.contains('open')) return; // password dialog open
+            var errEl = document.getElementById('login_error');
+            if (errEl) {
+                errEl.textContent = 'リンクが無効または期限切れです。パスワードでログインするか、管理者にリンクの再発行を依頼してください。';
+                errEl.style.display = 'block';
+            }
+            _openAuthGateLogin();
+        }, 10000);
     }
 })();
 
@@ -580,3 +596,29 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
     document.body.classList.add('schedule-awaiting-auth');
     _openAuthGateLogin();
 });
+
+// token_hash による直接検証（PKCE を使わない招待リンク用）
+// admin/generate_link が生成するリンクを ?token_hash=&type= 形式にすることで
+// クライアント側の code_verifier が不要な verifyOtp を使用する
+(async function _handleTokenHashLink() {
+    const sp = new URLSearchParams(window.location.search);
+    const tokenHash = sp.get('token_hash');
+    const type = sp.get('type') || _pageInitType;
+    if (!tokenHash || !type) return;
+
+    // リロード時の再検証を防ぐためURLから token_hash を除去
+    const loginHint = sp.get('login_hint') || '';
+    const cleanSearch = loginHint ? '?login_hint=' + encodeURIComponent(loginHint) : '';
+    history.replaceState(null, '', window.location.pathname + cleanSearch);
+
+    const { error } = await supabaseClient.auth.verifyOtp({ token_hash: tokenHash, type: type });
+    if (error) {
+        const errEl = document.getElementById('login_error');
+        if (errEl) {
+            errEl.textContent = 'リンクが無効または期限切れです。管理者にリンクの再発行を依頼してください。';
+            errEl.style.display = 'block';
+        }
+        _openAuthGateLogin();
+    }
+    // 成功時は onAuthStateChange が SIGNED_IN を発火してパスワード設定ダイアログを表示する
+})();

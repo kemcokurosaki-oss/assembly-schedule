@@ -1620,7 +1620,8 @@ function switchColumns(filterType) {
 gantt.templates.task_text = function(start, end, task) {
     const colorClass = getOwnerColorClass(task.owner);
     const textColor = "#fff";
-    return `<span style="color:${textColor};">${task.text}</span>`;
+    const parts = [task.project_number, task.machine, task.unit, task.text].filter(v => v);
+    return `<span style="color:${textColor};">${parts.join(' ')}</span>`;
 };
 
 gantt.templates.task_class = function(start, end, task) {
