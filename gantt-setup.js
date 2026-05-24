@@ -1921,6 +1921,12 @@ async function loadData() {
         data: activeTasks
     });
 
+    // タスクスナップショットキャッシュを初期化（バックグラウンド保存のロールバック用）
+    window._assemblyTaskCache = {};
+    activeTasks.forEach(function(t) {
+        window._assemblyTaskCache[String(t.id)] = Object.assign({}, t);
+    });
+
     // task_locations データを構築
     if (locData) {
         const taskMap = new Map(activeTasks.map(t => [t.id, t]));
