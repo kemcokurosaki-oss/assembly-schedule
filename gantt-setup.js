@@ -936,31 +936,38 @@ function _revertAssemblyTask(id, oldSnapshot) {
     } catch(e) {}
 }
 
-// ドラッグ（移動・リサイズ）後にSupabaseへ保存
-gantt.attachEvent("onAfterTaskDrag", async function(id, mode, e) {
+// ドラッグ（移動・リサイズ）後にSupabaseへ保存（バックグラウンド・UIブロックなし）
+gantt.attachEvent("onAfterTaskDrag", function(id, mode, e) {
     _dragInProgressIds.delete(String(id));          // ドラッグ完了：進行中フラグを解除
     _dragEndTimeById.set(String(id), Date.now());   // このタスクの直後抑制タイマーを開始
     _anyDragEndTime = Date.now();                   // 依存タスク連鎖更新の抑制タイマーを開始
     const item = gantt.getTask(id);
+    const oldSnapshot = window._assemblyTaskCache ? Object.assign({}, window._assemblyTaskCache[String(id)]) : null;
     const completionDate = gantt.date.add(new Date(item.end_date), -1, 'day');
-    try {
-        const _lb = (typeof window._getCurrentEditorName === 'function' ? window._getCurrentEditorName() : '') || '';
-        const dragUpd = {
-                start_date: _toDateStr(item.start_date),
-                end_date: _toDateStr(completionDate),
-                duration: item.duration != null ? Number(item.duration) : null
-        };
-        if (dragUpd.duration == null || !Number.isFinite(dragUpd.duration) || dragUpd.duration < 1) delete dragUpd.duration;
-        if (_lb) dragUpd.last_updated_by = _lb;
-        const { error } = await supabaseClient
-            .from('tasks')
-            .update(dragUpd)
-            .eq('id', id);
-        if (error) console.error("Error saving drag:", error);
-        else if (isResourceView) updateResourceData();
-    } catch(e) {
-        console.error("Exception in onAfterTaskDrag:", e);
+    const _lb = (typeof window._getCurrentEditorName === 'function' ? window._getCurrentEditorName() : '') || '';
+    const dragUpd = {
+            start_date: _toDateStr(item.start_date),
+            end_date: _toDateStr(completionDate),
+            duration: item.duration != null ? Number(item.duration) : null
+    };
+    if (dragUpd.duration == null || !Number.isFinite(dragUpd.duration) || dragUpd.duration < 1) delete dragUpd.duration;
+    if (_lb) dragUpd.last_updated_by = _lb;
+
+    // キャッシュをローカルで即時更新
+    if (window._assemblyTaskCache) {
+        window._assemblyTaskCache[String(id)] = Object.assign({}, item);
     }
+
+    supabaseClient.from('tasks').update(dragUpd).eq('id', id)
+        .then(function(_ref) {
+            if (_ref.error) {
+                console.error("Error saving drag:", _ref.error);
+                _revertAssemblyTask(id, oldSnapshot);
+                _showAssemblySaveError(item);
+                return;
+            }
+            if (isResourceView) updateResourceData();
+        });
 });
 
 gantt.attachEvent("onAfterTaskDelete", async function(id, item) {
