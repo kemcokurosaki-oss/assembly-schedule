@@ -865,21 +865,75 @@ gantt.attachEvent("onAfterTaskUpdate", function(id, item) {
         });
 });
 
-async function syncTaskLocation(taskId, locationCodeRaw) {
+// 場所同期（バックグラウンド・UIブロックなし）
+function _syncTaskLocationBg(taskId, locationCodeRaw, item) {
     const codes = normalizeLocationCodes(locationCodeRaw);
-    const { error: deleteError } = await supabaseClient
-        .from('task_locations')
-        .delete()
-        .eq('task_id', taskId);
-    if (deleteError) return deleteError;
+    supabaseClient.from('task_locations').delete().eq('task_id', taskId)
+        .then(function(_ref) {
+            if (_ref.error) {
+                console.error("Error syncing task location (delete):", _ref.error);
+                _showAssemblySaveError(null);
+                return;
+            }
+            if (codes.length === 0) return;
+            const rows = locationCodesToDbRows(taskId, codes);
+            supabaseClient.from('task_locations').insert(rows)
+                .then(function(_ref2) {
+                    if (_ref2.error) {
+                        console.error("Error syncing task location (insert):", _ref2.error);
+                        _showAssemblySaveError(null);
+                    }
+                });
+        });
+}
 
-    if (codes.length === 0) return null;
+// 保存失敗モーダルを表示
+function _showAssemblySaveError(item) {
+    const detail = item ? [item.project_number, item.machine, item.text].filter(Boolean).join(' ') : '';
+    const msg = document.getElementById('save-error-modal-msg');
+    if (msg) msg.textContent = (detail ? detail + ' の' : '') + '保存に失敗しました。';
+    const overlay = document.getElementById('save-error-modal-overlay');
+    if (overlay) overlay.classList.add('visible');
+}
 
-    const rows = locationCodesToDbRows(taskId, codes);
-    const { error: insertError } = await supabaseClient
-        .from('task_locations')
-        .insert(rows);
-    return insertError || null;
+// 保存失敗時にガントのタスクをスナップショットに戻す
+function _revertAssemblyTask(id, oldSnapshot) {
+    if (!oldSnapshot) return;
+    if (window._assemblyTaskCache) {
+        window._assemblyTaskCache[String(id)] = oldSnapshot;
+    }
+    if (!gantt.isTaskExists(id)) return;
+    try {
+        Object.assign(gantt.getTask(id), {
+            text:             oldSnapshot.text,
+            start_date:       oldSnapshot.start_date instanceof Date ? oldSnapshot.start_date : new Date(oldSnapshot.start_date),
+            end_date:         oldSnapshot.end_date   instanceof Date ? oldSnapshot.end_date   : new Date(oldSnapshot.end_date),
+            has_no_date:      oldSnapshot.has_no_date,
+            project_number:   oldSnapshot.project_number,
+            machine:          oldSnapshot.machine,
+            unit:             oldSnapshot.unit,
+            unit2:            oldSnapshot.unit2,
+            model_type:       oldSnapshot.model_type,
+            part_number:      oldSnapshot.part_number,
+            quantity:         oldSnapshot.quantity,
+            manufacturer:     oldSnapshot.manufacturer,
+            status:           oldSnapshot.status,
+            customer_name:    oldSnapshot.customer_name,
+            project_details:  oldSnapshot.project_details,
+            hyphen:           oldSnapshot.hyphen,
+            characteristic:   oldSnapshot.characteristic,
+            derivation:       oldSnapshot.derivation,
+            owner:            oldSnapshot.owner,
+            total_sheets:     oldSnapshot.total_sheets,
+            completed_sheets: oldSnapshot.completed_sheets,
+            duration:         oldSnapshot.duration,
+            task_type:        oldSnapshot.task_type,
+            is_business_trip: oldSnapshot.is_business_trip,
+            wish_date:        oldSnapshot.wish_date,
+            location_code:    oldSnapshot.location_code
+        });
+        gantt.refreshTask(id);
+    } catch(e) {}
 }
 
 // ドラッグ（移動・リサイズ）後にSupabaseへ保存
