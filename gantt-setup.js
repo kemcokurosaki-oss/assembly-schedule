@@ -792,77 +792,77 @@ gantt.attachEvent("onBeforeTaskDrag", function(id, mode, e) {
     return true;
 });
 
-gantt.attachEvent("onAfterTaskUpdate", async function(id, item) {
-    try {
-        // ドラッグ中は onAfterTaskDrag がまだ発火していないためスキップ
-        if (_dragInProgressIds.has(String(id))) return;
-        // ドラッグ直後（同一タスク）：onAfterTaskDrag が既にDBを更新済みのためスキップ
-        const dragAt = _dragEndTimeById.get(String(id));
-        if (dragAt !== undefined && Date.now() - dragAt < DRAG_SUPPRESS_MS) return;
-        // ドラッグ直後（依存タスク）：auto_scheduling による連鎖更新はスキップ
-        if (Date.now() - _anyDragEndTime < DRAG_SUPPRESS_MS) return;
+gantt.attachEvent("onAfterTaskUpdate", function(id, item) {
+    // ドラッグ中は onAfterTaskDrag がまだ発火していないためスキップ
+    if (_dragInProgressIds.has(String(id))) return;
+    // ドラッグ直後（同一タスク）：onAfterTaskDrag が既にDBを更新済みのためスキップ
+    const dragAt = _dragEndTimeById.get(String(id));
+    if (dragAt !== undefined && Date.now() - dragAt < DRAG_SUPPRESS_MS) return;
+    // ドラッグ直後（依存タスク）：auto_scheduling による連鎖更新はスキップ
+    if (Date.now() - _anyDragEndTime < DRAG_SUPPRESS_MS) return;
 
-        // 新規（createTask の仮行）の DB 反映は onAfterLightbox 経由の _finalizePendingNewTaskToDb で行う
-        if (_pendingNewTaskLightboxId != null && String(id) === String(_pendingNewTaskLightboxId)) {
-            return;
-        }
+    // 新規（createTask の仮行）の DB 反映は onAfterLightbox 経由の _finalizePendingNewTaskToDb で行う
+    if (_pendingNewTaskLightboxId != null && String(id) === String(_pendingNewTaskLightboxId)) {
+        return;
+    }
 
-        // has_no_dateの場合はend_dateをnullで保存、それ以外は-1日して完了日を保存
-        const endDateStr = item.has_no_date
-            ? null
-            : _toDateStr(gantt.date.add(new Date(item.end_date), -1, 'day'));
+    // 変更前スナップショット（保存失敗時のロールバック用）
+    const oldSnapshot = window._assemblyTaskCache ? Object.assign({}, window._assemblyTaskCache[String(id)]) : null;
 
-        const _lb = (typeof window._getCurrentEditorName === 'function' ? window._getCurrentEditorName() : '') || '';
-        const updBody = {
-                text: item.text,
-                start_date: _toDateStr(item.start_date),
-                end_date: endDateStr,
-                project_number: item.project_number,
-                machine: item.machine,
-                unit: item.unit,
-                unit2: item.unit2,
-                model_type: item.model_type,
-                part_number: item.part_number,
-                quantity: item.quantity,
-                manufacturer: item.manufacturer,
-                status: item.status,
-                customer_name: item.customer_name,
-                project_details: item.project_details,
-                hyphen: item.hyphen ?? null,
-                characteristic: item.characteristic,
-                derivation: item.derivation,
-                owner: item.owner,
-                total_sheets: Number(item.total_sheets) || 0,
-                completed_sheets: Number(item.completed_sheets) || 0,
-                duration: item.duration,
-                task_type: item.task_type || currentTaskTypeFilter || null,
-                is_business_trip: (item.task_type || currentTaskTypeFilter) === 'business_trip',
-                wish_date: item.wish_date || null
-        };
-        if (_lb) updBody.last_updated_by = _lb;
+    // has_no_dateの場合はend_dateをnullで保存、それ以外は-1日して完了日を保存
+    const endDateStr = item.has_no_date
+        ? null
+        : _toDateStr(gantt.date.add(new Date(item.end_date), -1, 'day'));
 
-        const { error } = await supabaseClient
-            .from('tasks')
-            .update(updBody)
-            .eq('id', id);
+    const _lb = (typeof window._getCurrentEditorName === 'function' ? window._getCurrentEditorName() : '') || '';
+    const updBody = {
+            text: item.text,
+            start_date: _toDateStr(item.start_date),
+            end_date: endDateStr,
+            project_number: item.project_number,
+            machine: item.machine,
+            unit: item.unit,
+            unit2: item.unit2,
+            model_type: item.model_type,
+            part_number: item.part_number,
+            quantity: item.quantity,
+            manufacturer: item.manufacturer,
+            status: item.status,
+            customer_name: item.customer_name,
+            project_details: item.project_details,
+            hyphen: item.hyphen ?? null,
+            characteristic: item.characteristic,
+            derivation: item.derivation,
+            owner: item.owner,
+            total_sheets: Number(item.total_sheets) || 0,
+            completed_sheets: Number(item.completed_sheets) || 0,
+            duration: item.duration,
+            task_type: item.task_type || currentTaskTypeFilter || null,
+            is_business_trip: (item.task_type || currentTaskTypeFilter) === 'business_trip',
+            wish_date: item.wish_date || null
+    };
+    if (_lb) updBody.last_updated_by = _lb;
 
-        if (error) {
-            console.error("Error updating task:", error);
-            alert("タスクの更新に失敗しました。\n" + error.message);
-        } else {
-            const locSyncError = await syncTaskLocation(id, item.location_code);
-            if (locSyncError) {
-                console.error("Error syncing task location:", locSyncError);
-                alert("場所の更新に失敗しました。\n" + locSyncError.message);
+    // キャッシュをローカルで即時更新（次回保存時の旧値取得に使用）
+    if (window._assemblyTaskCache) {
+        window._assemblyTaskCache[String(id)] = Object.assign({}, item);
+    }
+
+    // バックグラウンドで保存（UIをブロックしない）
+    supabaseClient.from('tasks').update(updBody).eq('id', id)
+        .then(function(_ref) {
+            if (_ref.error) {
+                console.error("Error updating task:", _ref.error);
+                _revertAssemblyTask(id, oldSnapshot);
+                _showAssemblySaveError(item);
+                return;
             }
+            // 場所の同期（バックグラウンド）
+            _syncTaskLocationBg(id, item.location_code, item);
             if (isResourceView) updateResourceData();
             // ▼マークの色を即時更新
             requestAnimationFrame(_renderWishDateMarks);
-        }
-    } catch (e) {
-        console.error("Exception in onAfterTaskUpdate:", e);
-        alert("タスク更新中に予期せぬエラーが発生しました。");
-    }
+        });
 });
 
 async function syncTaskLocation(taskId, locationCodeRaw) {
