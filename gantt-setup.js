@@ -1833,6 +1833,7 @@ async function loadData() {
     const { data, error } = tasksResult;
     if (error) {
         console.error("Supabase error:", error);
+        hideLoading();
         return;
     }
     const rawTaskRows = Array.isArray(data) ? data : [];
