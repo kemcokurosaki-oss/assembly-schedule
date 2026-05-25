@@ -631,7 +631,11 @@ function _updateDetailToolbar(gridWidth) {
 function showOwnerDetail(ownerName) {
     _resourceDetailOwner = ownerName;
     document.getElementById('resource_title').textContent = `${ownerName}さんの詳細リソース状況`;
-    renderOwnerDetailTimeline(ownerName);
+    showLoading();
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        renderOwnerDetailTimeline(ownerName);
+        hideLoading();
+    }));
 }
 
 function showOwnerOverview() {
