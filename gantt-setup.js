@@ -1966,6 +1966,7 @@ async function loadData() {
     if (isLocationMode) {
         renderLocationFloorPlan();
     }
+    hideLoading();
 }
 
 // グローバル変数の定義
