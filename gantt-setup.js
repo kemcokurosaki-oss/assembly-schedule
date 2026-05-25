@@ -550,7 +550,13 @@ function setZoom(level, btn) {
     gantt.ext.zoom.setLevel(level);
     document.querySelectorAll('.zoom-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    if (isResourceView) updateResourceData();
+    if (isResourceView) {
+        showLoading();
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            updateResourceData();
+            hideLoading();
+        }));
+    }
     // 組立場所の図面は配置変化ベースの日付のみ。日/週はリソースガント（renderLocationResourceTimeline 等）にのみ反映する
 }
 
