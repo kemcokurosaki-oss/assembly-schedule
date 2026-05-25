@@ -1,6 +1,15 @@
 // Gantt 基本構成
 gantt.config.date_format = "%Y-%m-%d";
 
+function showLoading() {
+    const el = document.getElementById('loading-overlay');
+    if (el) el.classList.add('visible');
+}
+function hideLoading() {
+    const el = document.getElementById('loading-overlay');
+    if (el) el.classList.remove('visible');
+}
+
 // 担当者プルダウン用インラインエディタ（複数選択対応）
 const OWNER_OPTIONS_ASSEMBLY   = ['米澤','桂','香西','古賀','長谷川','早川','廣田','宮本','山下','センティル','外注'];
 const OWNER_OPTIONS_ELECTRICAL = ['木村(至)','木村(圭)','守時','外注(電)'];
