@@ -1811,6 +1811,7 @@ async function _paginateTasksFetch(fetchPage) {
 
 // データ読み込み
 async function loadData() {
+    showLoading();
     const [tasksResult, locationsResult] = await Promise.all([
         _paginateTasksFetch((from, to) =>
             supabaseClient
