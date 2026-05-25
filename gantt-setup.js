@@ -2268,7 +2268,11 @@ function returnToResourceView() {
     }
     currentTaskTypeFilter = null;
     updateFilterButtons();
-    _enterResourceFullscreen();
+    showLoading();
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        _enterResourceFullscreen();
+        hideLoading();
+    }));
 }
 
 function _colSetName(filterType) {
