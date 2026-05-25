@@ -585,6 +585,7 @@ async function deleteSelectedTasks() {
     if (ids.length === 0) return;
     if (!confirm(`選択した ${ids.length} 件のタスクを削除しますか？`)) return;
 
+    showLoading();
     const { error } = await supabaseClient
         .from('tasks')
         .delete()
@@ -593,10 +594,11 @@ async function deleteSelectedTasks() {
     if (error) {
         console.error("Error deleting tasks:", error);
         alert("削除に失敗しました。\n" + error.message);
+        hideLoading();
         return;
     }
 
-    await loadData();
+    await loadData(); // loadData 内で hideLoading() が呼ばれる
     document.getElementById('multi_delete_btn').style.display = 'none';
 }
 
