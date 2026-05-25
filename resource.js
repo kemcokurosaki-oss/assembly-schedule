@@ -642,7 +642,11 @@ function showOwnerOverview() {
     _resourceDetailOwner = null;
     _updateDetailToolbar(0);
     document.getElementById('resource_title').textContent = '担当者別リソース状況';
-    updateResourceData();
+    showLoading();
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        updateResourceData();
+        hideLoading();
+    }));
 }
 
 function syncResourceScroll() {
