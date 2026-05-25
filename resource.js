@@ -767,9 +767,12 @@ function toggleResourceView() {
     if (isResourceView) {
         btn.innerText = "リソース表示×";
         btn.classList.add("btn-info");
-        // コンテンツを描画してからパネルを表示（古い内容が一瞬見えるのを防ぐ）
-        updateResourceData();
         panel.style.display = "flex";
+        showLoading();
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            updateResourceData();
+            hideLoading();
+        }));
     } else {
         btn.innerText = "リソース表示";
         btn.classList.remove("btn-info");
