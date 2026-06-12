@@ -2011,6 +2011,38 @@ function _isHoliday(date) {
         String(date.getDate()).padStart(2,'0');
     return HOLIDAYS.has(key);
 }
+
+/** 出張タスクの期限切れ判定（parsedTasks の DHTMLX 排他的 end_date を使用）
+ *  終了日(inclusive)+7日 を過ぎていれば期限切れ（8日以上経過）とみなす */
+function _isTripTaskExpired(task) {
+    if (!task || task.has_no_date || !task.end_date) return false;
+    try {
+        const e = task.end_date instanceof Date
+            ? new Date(task.end_date.getFullYear(), task.end_date.getMonth(), task.end_date.getDate())
+            : null;
+        if (!e || isNaN(e.getTime())) return false;
+        // DHTMLX end_date は排他的（DB end_date + 1日）なので -1+7 = +6 日
+        const expiry = new Date(e);
+        expiry.setDate(expiry.getDate() + 6);
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        return today > expiry;
+    } catch(_) { return false; }
+}
+
+/** 出張タスクの期限切れ判定（DB の end_date 文字列 "YYYY-MM-DD" 包括的を使用） */
+function _isTripTaskExpiredDb(dbEndDate) {
+    if (!dbEndDate) return false;
+    try {
+        const m = String(dbEndDate).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (!m) return false;
+        const incEnd = new Date(+m[1], +m[2]-1, +m[3]);
+        const expiry = new Date(incEnd);
+        expiry.setDate(expiry.getDate() + 7);
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        return today > expiry;
+    } catch(_) { return false; }
+}
+
 let currentOwnerFilter = [];      // 空配列 = 全担当者
 let currentTaskNameFilter = [];   // 空配列 = 全タスク名
 let _clearingEndDateId = null;   // 完了予定日クリア中のタスクID
