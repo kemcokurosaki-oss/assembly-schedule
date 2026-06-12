@@ -1905,9 +1905,12 @@ async function loadData() {
     });
 
     // 全体工程表で完了済みになった工事番号のタスクを除外
-    const activeTasks = parsedTasks.filter(t =>
-        !completedProjectNums.has(String(t.project_number || '').trim())
-    );
+    // ただし期限内の出張タスク（task_type='business_trip'）は完了済み工番でも表示する
+    const activeTasks = parsedTasks.filter(t => {
+        const pn = String(t.project_number || '').trim();
+        if (!completedProjectNums.has(pn)) return true;
+        return t.task_type === 'business_trip' && !_isTripTaskExpired(t);
+    });
 
     // task_locations の先頭レコードを場所コードとしてタスクに反映（グリッド表示・編集用）
     const locData = locationsResult.data || [];
