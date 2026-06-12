@@ -311,12 +311,6 @@ function renderResourceTimeline(owners) {
         : 0;
 
     let html = `<div style="width: ${totalWidth}px;">`; // 全体の幅を指定するコンテナを追加
-    // 担当者1人につき3行（組立・組立場所・出張）で表示
-    const TASK_TYPE_ROWS = [
-        { type: 'drawing',       label: '組立' },
-        { type: 'business_trip', label: '出張' },
-    ];
-
     owners.forEach((ownerName) => {
         // この担当者の全タスクを収集
         const allOwnerTasks = [];
