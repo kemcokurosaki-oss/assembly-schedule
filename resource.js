@@ -332,18 +332,32 @@ function renderResourceTimeline(owners) {
         const colorClass = getOwnerColorClass(ownerName);
         const textColor = "#fff";
 
-        // 4行（タスク種別ごと）を描画
-        TASK_TYPE_ROWS.forEach((rowDef, rowIndex) => {
-            const rowTasks = allOwnerTasks.filter(t => {
-                const tt = t.task_type;
-                if (rowDef.type === 'drawing') {
-                    // null・空・'drawing'・'assembly' はすべて組立タスクとして扱う（DBでは assembly と保存されることがある）
-                    return !tt || tt === '' || String(tt) === 'null' || tt === 'drawing' || tt === 'assembly';
-                }
-                return String(tt) === rowDef.type;
-            });
+        // 組立タスクを期間長でソートして2レーンに振り分け（重なりがある場合のみ2行目を使用）
+        const drawingTasksAll = allOwnerTasks.filter(t => {
+            const tt = t.task_type;
+            return !tt || tt === '' || String(tt) === 'null' || tt === 'drawing' || tt === 'assembly';
+        });
+        drawingTasksAll.sort((a, b) =>
+            (b.end_date.getTime() - b.start_date.getTime()) - (a.end_date.getTime() - a.start_date.getTime())
+        );
+        const drawingLane1 = [], drawingLane2 = [];
+        drawingTasksAll.forEach(t => {
+            const s = t.start_date.getTime(), e = t.end_date.getTime();
+            const overlaps = drawingLane1.some(u => s < u.end_date.getTime() && e > u.start_date.getTime());
+            if (!overlaps) drawingLane1.push(t); else drawingLane2.push(t);
+        });
+        const tripTasks = allOwnerTasks.filter(t => String(t.task_type) === 'business_trip');
+
+        const rowsToRender = [
+            { type: 'drawing',       label: '組立', tasks: drawingLane1 },
+            ...(drawingLane2.length > 0 ? [{ type: 'drawing', label: '組立', tasks: drawingLane2 }] : []),
+            { type: 'business_trip', label: '出張', tasks: tripTasks },
+        ];
+
+        rowsToRender.forEach((rowDef, rowIndex) => {
+            const rowTasks = rowDef.tasks;
             const isFirstRow = rowIndex === 0;
-            const isLastRow  = rowIndex === TASK_TYPE_ROWS.length - 1;
+            const isLastRow  = rowIndex === rowsToRender.length - 1;
 
             // 担当者の区切り線（先頭行の上に太線）
             const borderTop    = isFirstRow ? 'border-top: 2px solid #aaa;' : '';
