@@ -2388,7 +2388,7 @@ async function initProjectSelect(projectParam) {
     const { data, error } = await _paginateTasksFetch((from, to) =>
         supabaseClient
             .from('tasks')
-            .select('project_number, customer_name, project_details, is_detailed, major_item')
+            .select('project_number, customer_name, project_details, is_detailed, major_item, task_type, end_date')
             .neq('is_archived', true)
             .order('id', { ascending: true })
             .range(from, to)
@@ -2400,14 +2400,19 @@ async function initProjectSelect(projectParam) {
     if (!data) return;
 
     // 工事番号ごとの情報をマップに格納（is_detailed=false かつ major_item=組立 or 電装 のタスクのみ）
+    // 完了済み工番でも期限内の出張タスク（task_type='business_trip'）があれば工番フィルターに含める
     projectMap = new Map();
     data.forEach(item => {
         if (!item.project_number) return;
-        if (completedProjectNums.has(String(item.project_number).trim())) return; // 全体工程表で完了済みを除外
+        const isCompleted = completedProjectNums.has(String(item.project_number).trim());
         const isDetailed = (item.is_detailed === true || String(item.is_detailed).toUpperCase() === 'TRUE');
         if (isDetailed) return;
         const mi = String(item.major_item);
         if (mi !== '組立' && mi !== '電装') return;
+        if (isCompleted) {
+            // 完了済みは期限内の出張タスクがある場合のみ含める
+            if (item.task_type !== 'business_trip' || _isTripTaskExpiredDb(item.end_date)) return;
+        }
         const existing = projectMap.get(item.project_number);
         const customer = item.customer_name || (existing ? existing.customer : "");
         const details = item.project_details || (existing ? existing.details : "");
