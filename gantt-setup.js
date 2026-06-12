@@ -1760,6 +1760,9 @@ gantt.attachEvent("onBeforeTaskDisplay", function(id, task) {
         if (!currentOwnerFilter.some(f => taskOwners.includes(f))) return false;
     }
 
+    // 出張タスクで期限切れ（終了日から8日以上経過）は非表示
+    if (task.task_type === 'business_trip' && _isTripTaskExpired(task)) return false;
+
     return true;
 });
 
