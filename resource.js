@@ -533,6 +533,7 @@ function renderOwnerDetailTimeline(ownerName) {
                     ${todayLineHtml}
                     ${hasDate ? `
                     <div class="resource-cell-bar ${colorClass}"
+                         data-task-id="${t.id}"
                          style="position: absolute; top: 4px; height: 22px; left: ${left}px; width: ${barWidth}px; z-index: 10;"
                          title="${t.text} (${t.project_number})">
                          <span class="resource-bar-text" style="color:${textColor}; font-size:11px; font-weight:bold;">${[t.project_number, t.machine, t.unit, t.text].filter(v=>v).join(' ')}</span>
