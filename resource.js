@@ -471,12 +471,16 @@ function renderOwnerDetailTimeline(ownerName) {
         const isDetailed = (t.is_detailed === true || String(t.is_detailed).toLowerCase() === "true" || String(t.is_detailed).toLowerCase() === "t" || String(t.is_detailed) === "1");
         const isAssembly = String(t.major_item) === '組立';
         let isMatch = false;
-        if (!isDetailed && isAssembly && t.owner) {
-            const taskOwners = String(t.owner).split(/[,、\s]+/).map(o => o.trim());
-            if (ownerName === "田中(善)") {
-                isMatch = taskOwners.includes("田中(善)") || taskOwners.includes("田中");
-            } else {
-                isMatch = taskOwners.includes(ownerName);
+        if (!isDetailed && isAssembly) {
+            if (ownerName === "未定") {
+                isMatch = !String(t.owner || '').trim();
+            } else if (t.owner) {
+                const taskOwners = String(t.owner).split(/[,、\s]+/).map(o => o.trim());
+                if (ownerName === "田中(善)") {
+                    isMatch = taskOwners.includes("田中(善)") || taskOwners.includes("田中");
+                } else {
+                    isMatch = taskOwners.includes(ownerName);
+                }
             }
         }
         if (isMatch) ownerTasks.push(t);
