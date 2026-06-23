@@ -436,6 +436,8 @@ function renderResourceTimeline(owners) {
     container.innerHTML = html;
     renderResourceCalendarHeader();
     syncResourceScroll();
+    initAssemblyResourceBarDragAndResize(container);
+    initAssemblyResourceBarOwnerPopup(container);
 }
 
 function renderOwnerDetailTimeline(ownerName) {
