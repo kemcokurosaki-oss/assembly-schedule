@@ -845,7 +845,7 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
 /* ===== ログイン ===== */
 #login_overlay {
     display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.5); z-index: 200000;
+    background: rgba(0,0,0,0.5); z-index: 400000;
     align-items: center; justify-content: center;
 }
 #login_overlay.open { display: flex; }
