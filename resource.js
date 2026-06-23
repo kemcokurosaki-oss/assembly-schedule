@@ -1171,6 +1171,310 @@ function renderLocationResourceTimeline() {
     syncResourceScroll();
 }
 
+// ==========================================
+// リソース画面バーのドラッグ編集（開始日・終了日・期間変更）
+// ==========================================
+
+function _resBarEventToTimelineX(e, timelineEl) {
+    const r = timelineEl.getBoundingClientRect();
+    return e.clientX - r.left;
+}
+
+function _resBarDayStart(d) {
+    const dt = new Date(d);
+    if (gantt.date && typeof gantt.date.day_start === "function") {
+        return gantt.date.day_start(new Date(dt));
+    }
+    return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+}
+
+function initAssemblyResourceBarDragAndResize(container) {
+    if (!container || typeof gantt === "undefined" || typeof supabaseClient === "undefined") return;
+    if (gantt.config.readonly) return;
+
+    const EDGE = 8;
+    const MOVE_THRESH = 5;
+
+    container.querySelectorAll(".resource-cell-bar[data-task-id]").forEach(function(bar) {
+        bar.classList.add("resource-bar-drag-enabled");
+
+        bar.addEventListener("mousemove", function(ev) {
+            if (isResourceFullscreen) { bar.style.cursor = ""; return; }
+            const sc = gantt.getScale();
+            if (!sc || sc.unit !== "day") { bar.style.cursor = "pointer"; return; }
+            const br = bar.getBoundingClientRect();
+            const lx = ev.clientX - br.left;
+            bar.style.cursor = (lx <= EDGE || lx >= br.width - EDGE) ? "ew-resize" : "grab";
+        });
+        bar.addEventListener("mouseleave", function() { bar.style.cursor = ""; });
+
+        bar.addEventListener("mousedown", function(e) {
+            if (e.button !== 0) return;
+            if (isResourceFullscreen) return;
+            if (gantt.config.readonly) return;
+
+            const tid = bar.getAttribute("data-task-id");
+            if (!tid) return;
+            let task;
+            try { task = gantt.getTask(tid); } catch (err) { return; }
+            if (!task || task.$virtual) return;
+
+            const timeline = bar.closest(".resource-timeline");
+            if (!timeline) return;
+
+            const sc0 = gantt.getScale();
+            if (!sc0 || sc0.unit !== "day") return;
+
+            const br = bar.getBoundingClientRect();
+            const lx = e.clientX - br.left;
+            let edge = "move";
+            if (lx <= EDGE) edge = "resize-start";
+            else if (lx >= br.width - EDGE) edge = "resize-end";
+
+            const startOrig = new Date(task.start_date);
+            const durOrig = Math.max(1, Number(task.duration) || 1);
+
+            const x0 = _resBarEventToTimelineX(e, timeline);
+            const grabOff = x0 - parseFloat(bar.style.left);
+
+            let previewStart = new Date(startOrig);
+            let previewDur = durOrig;
+            let dragging = false;
+            const startMx = e.clientX;
+
+            function paint() {
+                const s = _resBarDayStart(previewStart);
+                const leftPx = gantt.posFromDate(s);
+                const rightPx = gantt.posFromDate(gantt.calculateEndDate(s, previewDur));
+                bar.style.left = leftPx + "px";
+                bar.style.width = Math.max(2, rightPx - leftPx) + "px";
+            }
+
+            function onMove(ev) {
+                if (gantt.config.readonly) return;
+                const dx = ev.clientX - startMx;
+                if (!dragging && Math.abs(dx) < MOVE_THRESH) return;
+                if (!dragging) {
+                    dragging = true;
+                    bar.classList.add("resource-cell-bar--dragging");
+                    document.body.style.userSelect = "none";
+                }
+                const x = _resBarEventToTimelineX(ev, timeline);
+                if (edge === "move") {
+                    const nd = gantt.dateFromPos(x - grabOff);
+                    if (!nd) return;
+                    previewStart = _resBarDayStart(nd);
+                    previewDur = durOrig;
+                } else if (edge === "resize-end") {
+                    const cell = _resBarDayStart(gantt.dateFromPos(x));
+                    const sc = gantt.getScale();
+                    const u = (sc && sc.unit) ? sc.unit : "day";
+                    const exclusiveEnd = gantt.date.add(cell, 1, u);
+                    previewStart = _resBarDayStart(startOrig);
+                    previewDur = Math.max(1, gantt.calculateDuration(previewStart, exclusiveEnd));
+                } else if (edge === "resize-start") {
+                    const ns = _resBarDayStart(gantt.dateFromPos(x));
+                    const endEx = gantt.calculateEndDate(_resBarDayStart(startOrig), durOrig);
+                    if (ns < endEx) {
+                        previewStart = ns;
+                        previewDur = Math.max(1, gantt.calculateDuration(ns, endEx));
+                    }
+                }
+                paint();
+            }
+
+            function onUp() {
+                document.removeEventListener("mousemove", onMove, true);
+                document.removeEventListener("mouseup", onUp, true);
+                document.body.style.userSelect = "";
+                bar.classList.remove("resource-cell-bar--dragging");
+                if (!dragging) return;
+                bar._suppressNextClick = true;
+
+                const s1 = _resBarDayStart(previewStart);
+                const startDb0 = _toDateStr(_resBarDayStart(startOrig));
+                const startDb1 = _toDateStr(s1);
+                const dur1 = previewDur;
+                if (startDb0 === startDb1 && Number(durOrig) === Number(dur1)) {
+                    paint();
+                    return;
+                }
+
+                const endExclusive = gantt.calculateEndDate(s1, dur1);
+                const endInclusive = gantt.date.add(new Date(endExclusive), -1, 'day');
+                const _lb = (typeof window._getCurrentEditorName === 'function' ? window._getCurrentEditorName() : '') || '';
+                const upd = {
+                    start_date: startDb1,
+                    duration: dur1,
+                    end_date: _toDateStr(endInclusive)
+                };
+                if (_lb) upd.last_updated_by = _lb;
+
+                const realId = task.original_id || tid;
+
+                try {
+                    const gt = gantt.getTask(tid);
+                    if (gt) {
+                        gt.start_date = s1;
+                        gt.duration = dur1;
+                        gt.end_date = endExclusive;
+                        gantt.refreshTask(tid);
+                    }
+                } catch (_e) {}
+
+                updateResourceData();
+
+                supabaseClient.from("tasks").update(upd).eq("id", realId)
+                    .then(function(_ref) {
+                        if (_ref.error) {
+                            console.error(_ref.error);
+                            if (typeof _showAssemblySaveError === 'function') {
+                                _showAssemblySaveError(task);
+                            } else {
+                                alert("保存に失敗しました。");
+                            }
+                            try {
+                                const gt2 = gantt.getTask(tid);
+                                if (gt2) {
+                                    gt2.start_date = startOrig;
+                                    gt2.duration = durOrig;
+                                    gt2.end_date = gantt.calculateEndDate(startOrig, durOrig);
+                                    gantt.refreshTask(tid);
+                                }
+                            } catch (_e2) {}
+                            updateResourceData();
+                        }
+                    });
+            }
+
+            document.addEventListener("mousemove", onMove, true);
+            document.addEventListener("mouseup", onUp, true);
+            e.preventDefault();
+        });
+    });
+}
+
+// ==========================================
+// リソース画面バーの右クリック → 担当者変更ポップアップ
+// ==========================================
+
+function initAssemblyResourceBarOwnerPopup(container) {
+    if (!container || typeof gantt === "undefined" || typeof supabaseClient === "undefined") return;
+    if (gantt.config.readonly) return;
+
+    container.querySelectorAll(".resource-cell-bar[data-task-id]").forEach(function(bar) {
+        bar.addEventListener("contextmenu", function(e) {
+            if (isResourceFullscreen) return;
+            if (gantt.config.readonly) return;
+            const tid = bar.getAttribute("data-task-id");
+            if (!tid) return;
+            let task;
+            try { task = gantt.getTask(tid); } catch (err) { return; }
+            if (!task || task.$virtual) return;
+            e.preventDefault();
+            e.stopPropagation();
+            _showAssemblyResourceOwnerPopup(tid, task, e.clientX, e.clientY);
+        });
+    });
+}
+
+function _showAssemblyResourceOwnerPopup(taskId, task, clientX, clientY) {
+    _closeAssemblyResourceOwnerPopup();
+
+    const ownerOptions = (typeof getOwnerOptions === 'function')
+        ? getOwnerOptions(task)
+        : ['米澤','桂','香西','古賀','長谷川','早川','廣田','宮本','山下','センティル','外注'];
+    const currentOwners = (typeof parseOwnerNames === 'function')
+        ? parseOwnerNames(task.owner || '')
+        : String(task.owner || '').split(/[,、\s]+/).map(function(s) { return s.trim(); }).filter(Boolean);
+
+    const popup = document.createElement('div');
+    popup.id = 'assembly_resource_owner_popup';
+    popup.style.cssText = 'position:fixed;background:#fff;border:1px solid #ccc;border-radius:4px;box-shadow:0 2px 10px rgba(0,0,0,0.25);z-index:10000;padding:10px 12px;min-width:160px;font-family:メイリオ,Meiryo,sans-serif;font-size:12px;';
+
+    let html = '<div style="font-weight:bold;margin-bottom:8px;color:#333;border-bottom:1px solid #eee;padding-bottom:4px;">担当者変更</div>';
+    html += '<div style="max-height:200px;overflow-y:auto;margin-bottom:8px;">';
+    ownerOptions.forEach(function(name) {
+        const checked = currentOwners.includes(name) ? 'checked' : '';
+        html += '<label style="display:block;padding:3px 0;cursor:pointer;white-space:nowrap;">'
+            + '<input type="checkbox" value="' + name + '" ' + checked + ' style="margin-right:6px;vertical-align:middle;">'
+            + name + '</label>';
+    });
+    html += '</div>';
+    html += '<div style="display:flex;gap:6px;">';
+    html += '<button id="asm_res_owner_ok" style="flex:1;padding:4px 8px;font-size:12px;cursor:pointer;background:#1976d2;color:#fff;border:none;border-radius:3px;font-family:メイリオ,Meiryo,sans-serif;">確定</button>';
+    html += '<button id="asm_res_owner_cancel" style="flex:1;padding:4px 8px;font-size:12px;cursor:pointer;background:#fff;border:1px solid #bbb;border-radius:3px;font-family:メイリオ,Meiryo,sans-serif;">キャンセル</button>';
+    html += '</div>';
+    popup.innerHTML = html;
+    document.body.appendChild(popup);
+
+    const pw = popup.offsetWidth || 180;
+    const ph = popup.offsetHeight || 260;
+    let left = clientX + 6;
+    let top = clientY + 6;
+    if (left + pw > window.innerWidth - 8) left = Math.max(8, clientX - pw - 6);
+    if (top + ph > window.innerHeight - 8) top = Math.max(8, clientY - ph - 6);
+    popup.style.left = left + 'px';
+    popup.style.top = top + 'px';
+
+    popup.querySelector('#asm_res_owner_ok').onclick = function() {
+        const checked = Array.from(popup.querySelectorAll('input[type=checkbox]:checked')).map(function(el) { return el.value; });
+        const newOwner = checked.join(',');
+        _closeAssemblyResourceOwnerPopup();
+        _saveAssemblyResourceTaskOwner(taskId, newOwner);
+    };
+    popup.querySelector('#asm_res_owner_cancel').onclick = _closeAssemblyResourceOwnerPopup;
+
+    setTimeout(function() {
+        document.addEventListener('mousedown', _assemblyResourceOwnerPopupOutsideHandler);
+    }, 100);
+}
+
+function _assemblyResourceOwnerPopupOutsideHandler(e) {
+    const popup = document.getElementById('assembly_resource_owner_popup');
+    if (popup && !popup.contains(e.target)) {
+        _closeAssemblyResourceOwnerPopup();
+    }
+}
+
+function _closeAssemblyResourceOwnerPopup() {
+    const p = document.getElementById('assembly_resource_owner_popup');
+    if (p) p.remove();
+    document.removeEventListener('mousedown', _assemblyResourceOwnerPopupOutsideHandler);
+}
+
+function _saveAssemblyResourceTaskOwner(taskId, newOwner) {
+    let task;
+    try { task = gantt.getTask(taskId); } catch (err) { return; }
+    if (!task) return;
+
+    const oldOwner = task.owner;
+    if (oldOwner === newOwner) return;
+
+    task.owner = newOwner;
+    gantt.refreshTask(taskId);
+    updateResourceData();
+
+    const _lb = (typeof window._getCurrentEditorName === 'function' ? window._getCurrentEditorName() : '') || '';
+    const upd = { owner: newOwner };
+    if (_lb) upd.last_updated_by = _lb;
+
+    supabaseClient.from('tasks').update(upd).eq('id', taskId)
+        .then(function(_ref) {
+            if (_ref.error) {
+                console.error(_ref.error);
+                if (typeof _showAssemblySaveError === 'function') {
+                    _showAssemblySaveError(task);
+                } else {
+                    alert('保存に失敗しました。');
+                }
+                task.owner = oldOwner;
+                gantt.refreshTask(taskId);
+                updateResourceData();
+            }
+        });
+}
+
 window.addEventListener('DOMContentLoaded', () => {
     const resourceContent = document.querySelector(".resource-content");
     if (resourceContent) {
