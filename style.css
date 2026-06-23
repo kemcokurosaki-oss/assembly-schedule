@@ -212,6 +212,9 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
     border: 1px solid rgba(0,0,0,0.15);
 }
 .resource-bar-text { padding: 0 5px; overflow: hidden; text-overflow: ellipsis; }
+.resource-bar-drag-enabled { cursor: grab; }
+.resource-bar-drag-enabled:active { cursor: grabbing; }
+.resource-cell-bar.resource-cell-bar--dragging { z-index: 50 !important; opacity: 0.95; }
 
 /* 担当者ごとのバーの色設定（12色） */
 .owner-yonezawa  { background-color: #1565c0 !important; border-color: #0d47a1 !important; color: #fff !important; } /* 米澤: ブルー */
