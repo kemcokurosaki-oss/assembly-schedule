@@ -942,7 +942,7 @@ body.schedule-awaiting-auth .main-container {
 /* ===== パスワード設定ダイアログ ===== */
 #setpw_overlay {
     display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.6); z-index: 200001;
+    background: rgba(0,0,0,0.6); z-index: 400001;
     align-items: center; justify-content: center;
 }
 #setpw_overlay.open { display: flex; }
