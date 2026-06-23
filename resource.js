@@ -241,15 +241,17 @@ function updateResourceData() {
             if (hasTask) return;
             const isDetailed = (task.is_detailed === true || String(task.is_detailed).toLowerCase() === "true" || String(task.is_detailed).toLowerCase() === "t" || String(task.is_detailed) === "1");
             const isAssembly = String(task.major_item) === '組立';
-            if (!isDetailed && isAssembly && task.owner) {
-                const owners = String(task.owner).split(/[,、\s]+/).map(o => o.trim());
-                // 田中(善)の場合、"田中(善)" または "田中" が含まれているかチェック
-                if (ownerName === "田中(善)") {
-                    if (owners.includes("田中(善)") || owners.includes("田中")) {
+            if (!isDetailed && isAssembly) {
+                if (ownerName === "未定") {
+                    const ownerVal = String(task.owner || '').trim();
+                    if (!ownerVal) hasTask = true;
+                } else if (task.owner) {
+                    const owners = String(task.owner).split(/[,、\s]+/).map(o => o.trim());
+                    if (ownerName === "田中(善)") {
+                        if (owners.includes("田中(善)") || owners.includes("田中")) hasTask = true;
+                    } else if (owners.includes(ownerName)) {
                         hasTask = true;
                     }
-                } else if (owners.includes(ownerName)) {
-                    hasTask = true;
                 }
             }
         });
