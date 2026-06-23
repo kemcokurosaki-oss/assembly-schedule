@@ -29,7 +29,8 @@ const ownerColorMap = {
     "木村(至)":   "owner-kimura-i",
     "木村(圭)":   "owner-kimura-k",
     "守時":       "owner-moritoki",
-    "外注(電)":   "owner-gaichuu-e"
+    "外注(電)":   "owner-gaichuu-e",
+    "未定":       "owner-mitei"
 };
 
 /** 担当文字列の先頭＝メイン担当（カンマ・読点・空白区切り） */
