@@ -227,6 +227,7 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family:
 .owner-miyamoto  { background-color: #f57f17 !important; border-color: #e65100 !important; color: #fff !important; } /* 宮本: アンバー */
 .owner-yamashita { background-color: #4e342e !important; border-color: #3e2723 !important; color: #fff !important; } /* 山下: ブラウン */
 .owner-senthil   { background-color: #c8a200 !important; border-color: #a08000 !important; color: #fff !important; } /* センティル: 黄色 */
+.owner-kobayashi { background-color: #5d4037 !important; border-color: #4e342e !important; color: #fff !important; } /* 小林: ダークブラウン */
 .owner-masuda    { background-color: #e91e63 !important; border-color: #c2185b !important; color: #fff !important; } /* 増田: ホットピンク */
 .owner-gaichuu   { background-color: #546e7a !important; border-color: #37474f !important; color: #fff !important; } /* 外注: ブルーグレー */
 .owner-gaichuu-e { background-color: #78909c !important; border-color: #546e7a !important; color: #fff !important; } /* 外注(電): グレーブルー */
