@@ -22,3 +22,6 @@
 *.key
 node_modules/
 .claude/
+
+# 古い控え
+backup/
