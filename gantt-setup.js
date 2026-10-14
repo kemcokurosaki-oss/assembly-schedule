@@ -1,6 +1,36 @@
 // Gantt 基本構成
 gantt.config.date_format = "%Y-%m-%d";
 
+// DB の値を HTML に埋め込むときは必ずこれを通す（書き込まれた文字列がタグやスクリプトとして動かないようにする）
+function _escapeGridText(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// 表示方法（template）のない列は、ガントのライブラリが DB の値をそのまま HTML として描画する。
+// 列を設定した時点で、無害化して表示する template を補う
+(function () {
+    const RAW_COLUMNS = ['start_date', 'end_date', 'duration', 'add'];
+    const fill = (cols) => {
+        (cols || []).forEach(col => {
+            if (!col || col.template || RAW_COLUMNS.includes(col.name)) return;
+            col.template = (task) => _escapeGridText(task[col.name]);
+            col.template.$autoEscape = true;
+        });
+        return cols;
+    };
+    let current = fill(gantt.config.columns);
+    try {
+        Object.defineProperty(gantt.config, 'columns', {
+            configurable: true,
+            enumerable: true,
+            get: () => current,
+            set: (v) => { current = fill(v); },
+        });
+    } catch (e) {
+        console.warn('列の無害化設定に失敗しました', e);
+    }
+})();
+
 function showLoading() {
     const el = document.getElementById('loading-overlay');
     if (el) el.classList.add('visible');
@@ -1699,7 +1729,7 @@ gantt.templates.task_text = function(start, end, task) {
     const colorClass = getOwnerColorClass(task.owner);
     const textColor = "#fff";
     const parts = [task.project_number, task.machine, task.unit, task.text].filter(v => v);
-    return `<span style="color:${textColor};">${parts.join(' ')}</span>`;
+    return `<span style="color:${textColor};">${_escapeGridText(parts.join(' '))}</span>`;
 };
 
 gantt.templates.task_class = function(start, end, task) {
