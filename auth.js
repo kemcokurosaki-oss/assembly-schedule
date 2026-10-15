@@ -66,6 +66,43 @@ const supabaseClient = supabase.createClient(S_URL, S_KEY);
     }
 })();
 
+// ===== Microsoft 365 ログイン =====
+// 完全移行スイッチ。true にすると、ログイン画面は「Microsoftでサインイン」だけになり（パスワード欄は非常用に
+// URL へ ?pw=1 を付けたときだけ表示）、社員なら名簿（VIEWERS）に無くても閲覧できる。
+// false の間は ?ms=1 のときだけボタンを出す（動作確認用）
+const M365_ONLY = false;
+const _authQs = new URLSearchParams(window.location.search);
+const SHOW_MS_LOGIN       = M365_ONLY || _authQs.has('ms');
+const SHOW_PASSWORD_LOGIN = !M365_ONLY || _authQs.has('pw');
+
+async function doMicrosoftLogin() {
+    const { error } = await supabaseClient.auth.signInWithOAuth({
+        provider: 'azure',
+        options: { scopes: 'email', redirectTo: window.location.origin + window.location.pathname }
+    });
+    if (error) _showLoginError('Microsoftでのログインを開始できませんでした');
+}
+
+function _showLoginError(msg) {
+    const errEl = document.getElementById('login_error');
+    errEl.textContent = msg;
+    errEl.style.display = 'block';
+}
+
+function _applyLoginOptions() {
+    document.getElementById('login_ms_btn').style.display        = SHOW_MS_LOGIN ? 'flex' : 'none';
+    document.getElementById('login_ms_divider').style.display    = SHOW_MS_LOGIN && SHOW_PASSWORD_LOGIN ? 'flex' : 'none';
+    document.getElementById('login_password_area').style.display = SHOW_PASSWORD_LOGIN ? '' : 'none';
+}
+
+// Microsoft でのログインに失敗して戻ってきたとき（?error=... / #error=...）の理由
+const _oauthError = (() => {
+    const p = new URLSearchParams(window.location.hash.replace('#', '?'));
+    const err = p.get('error') || _authQs.get('error');
+    if (!err) return null;
+    return 'Microsoftでのログインに失敗しました（' + (p.get('error_description') || _authQs.get('error_description') || err) + '）';
+})();
+
 // ===== 認証管理 =====
 // 編集可能なメールアドレスリスト
 const EDITORS = [
@@ -99,6 +136,11 @@ const VIEWERS = [
     'd-moritoki@kusakabe.com',
     't-moriguchi@kusakabe.com',
 ];
+
+// 閲覧できるか。完全移行後は、ログインできた社員（日下部電機の M365 アカウント）なら誰でも閲覧できる
+function _canView(email) {
+    return M365_ONLY || _emailInList(email, VIEWERS);
+}
 
 function _emailInList(email, list) {
     const e = (email || '').trim().toLowerCase();
@@ -206,9 +248,14 @@ function handleAuthBtn() {
 
 function _openAuthGateLogin() {
     document.body.classList.add('schedule-awaiting-auth');
+    _applyLoginOptions();
     const ov = document.getElementById('login_overlay');
     ov.classList.add('open', 'auth-gate');
-    setTimeout(function () { document.getElementById('login_email').focus(); }, 100);
+    if (_oauthError) {
+        _showLoginError(_oauthError);
+        history.replaceState(null, '', window.location.pathname);
+    }
+    if (SHOW_PASSWORD_LOGIN) setTimeout(function () { document.getElementById('login_email').focus(); }, 100);
 }
 
 function _closeAuthGateLogin() {
@@ -221,11 +268,12 @@ function openLoginDialog() {
     document.getElementById('login_email').value = '';
     document.getElementById('login_password').value = '';
     document.getElementById('login_error').style.display = 'none';
+    _applyLoginOptions();
     const ov = document.getElementById('login_overlay');
     ov.classList.remove('auth-gate');
     document.body.classList.remove('schedule-awaiting-auth');
     ov.classList.add('open');
-    setTimeout(function () { document.getElementById('login_email').focus(); }, 100);
+    if (SHOW_PASSWORD_LOGIN) setTimeout(function () { document.getElementById('login_email').focus(); }, 100);
 }
 
 function closeLoginDialog() {
@@ -260,7 +308,7 @@ async function doLogin() {
         errEl.style.display = 'block';
         return;
     }
-    if (!_emailInList(email, EDITORS) && !_emailInList(email, VIEWERS)) {
+    if (!_emailInList(email, EDITORS) && !_canView(email)) {
         await supabaseClient.auth.signOut();
         errEl.textContent = 'この工程表へのアクセス権限がありません';
         errEl.style.display = 'block';
@@ -315,7 +363,7 @@ async function doSetPassword() {
         const { data: { user } } = await supabaseClient.auth.getUser();
         const em = user?.email || '';
         const isEd = !!user && _emailInList(em, EDITORS);
-        const isVw = !!user && !isEd && _emailInList(em, VIEWERS);
+        const isVw = !!user && !isEd && _canView(em);
         if (user && !isEd && !isVw) {
             await supabaseClient.auth.signOut();
             document.getElementById('login_email').value = '';
@@ -504,7 +552,7 @@ async function tryExecuteScheduleDataLoader() {
         return;
     }
     const isEd = _emailInList(email, EDITORS);
-    const isVw = !isEd && _emailInList(email, VIEWERS);
+    const isVw = !isEd && _canView(email);
     if (!isEd && !isVw) {
         await supabaseClient.auth.signOut();
         document.body.classList.add('schedule-awaiting-auth');
@@ -546,7 +594,7 @@ window.__onAssemblyGanttShellReady = async function () {
     if (!session) return;
     const em = session.user?.email || '';
     const isEd = _emailInList(em, EDITORS);
-    const isVw = !isEd && _emailInList(em, VIEWERS);
+    const isVw = !isEd && _canView(em);
     if (!isEd && !isVw) return;
     _updateUIForAuth(isEd, isVw);
     try {
@@ -570,7 +618,7 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
     _currentEditorEmail = email;
     if (session) {
         const isEd = _emailInList(email, EDITORS);
-        const isVw = !isEd && _emailInList(email, VIEWERS);
+        const isVw = !isEd && _canView(email);
         if (!isEd && !isVw) {
             await supabaseClient.auth.signOut();
             const errEl = document.getElementById('login_error');
