@@ -38,6 +38,16 @@ const _authUrlSnapshot = (function () {
     }
 })();
 const _pageInitType = _authUrlSnapshot.type;
+// Microsoft でのログイン後、新規作成のときは Supabase が別のアプリ（Site URL）に戻してしまうことがある。
+// ログインを始めたページを m365_return_to に覚えておき、違うページに戻ってきたらトークンごと元のページへ送る
+(function () {
+    const ret = localStorage.getItem('m365_return_to');
+    if (!ret) return;
+    const fromLogin = /access_token=|error=/.test(location.hash) || /[?&](code|error)=/.test(location.search);
+    if (!fromLogin) return;
+    localStorage.removeItem('m365_return_to');
+    if (ret !== location.origin + location.pathname) location.replace(ret + location.search + location.hash);
+})();
 const supabaseClient = supabase.createClient(S_URL, S_KEY);
 
 // 先にログイン画面を出し、工程表本体の一瞬の表示を防ぐ（script は body 末尾想定）
@@ -76,9 +86,10 @@ const SHOW_MS_LOGIN       = M365_ONLY || _authQs.has('ms');
 const SHOW_PASSWORD_LOGIN = !M365_ONLY || _authQs.has('pw');
 
 async function doMicrosoftLogin() {
+    localStorage.setItem('m365_return_to', window.location.origin + window.location.pathname);
     const { error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'azure',
-        options: { scopes: 'email', redirectTo: window.location.origin + window.location.pathname }
+        options: { scopes: 'openid profile email', redirectTo: window.location.origin + window.location.pathname }
     });
     if (error) _showLoginError('Microsoftでのログインを開始できませんでした');
 }
