@@ -681,3 +681,6 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
     }
     // 成功時は onAuthStateChange が SIGNED_IN を発火してパスワード設定ダイアログを表示する
 })();
+
+// ログイン中は「ログイン／ログアウト」ボタンの代わりに、ユーザー表示（アイコン＋フルネーム、押すとアドレス・権限・ログアウト）を出す
+M365Login.mountUserChip(supabaseClient, { mountAfter: '#auth_btn', hideWhenLoggedIn: '#auth_btn', canEdit: () => _isEditor });
