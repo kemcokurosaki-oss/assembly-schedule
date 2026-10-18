@@ -86,6 +86,8 @@ const SHOW_MS_LOGIN       = M365_ONLY || _authQs.has('ms');
 const SHOW_PASSWORD_LOGIN = !M365_ONLY || _authQs.has('pw');
 
 async function doMicrosoftLogin() {
+    // PCのファイルを直接開いた状態（file://）では、ログイン後に戻ってくる先が無いため使えない
+    if (location.protocol === 'file:') { _showLoginError('このページはPCのファイルを直接開いているため、Microsoftでログインできません。GitHubのURL（https://kemcokurosaki-oss.github.io/…）から開いてください。'); return; }
     localStorage.setItem('m365_return_to', window.location.origin + window.location.pathname);
     const { error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'azure',
