@@ -80,7 +80,7 @@ const supabaseClient = supabase.createClient(S_URL, S_KEY);
 // 完全移行スイッチ。true にすると、ログイン画面は「Microsoftでサインイン」だけになり（パスワード欄は非常用に
 // URL へ ?pw=1 を付けたときだけ表示）、社員なら名簿（VIEWERS）に無くても閲覧できる。
 // false の間は ?ms=1 のときだけボタンを出す（動作確認用）
-const M365_ONLY = false;
+const M365_ONLY = true;
 const _authQs = new URLSearchParams(window.location.search);
 const SHOW_MS_LOGIN       = M365_ONLY || _authQs.has('ms');
 const SHOW_PASSWORD_LOGIN = !M365_ONLY || _authQs.has('pw');
